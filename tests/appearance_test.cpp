@@ -15,6 +15,7 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QSettings>
+#include <QScrollArea>
 #include <QSignalSpy>
 #include <QStackedWidget>
 #include <QTableView>
@@ -38,7 +39,100 @@ private slots:
     void dialogPreview();
     void explorerLargeFontLayout();
     void modalAndPackagePreviewBlockChanges();
+    void searchCoalescesTypingAndFlushes();
+    void keyboardNavigationSearchAndRefresh();
+    void overviewResponsiveLayout_data();
+    void overviewResponsiveLayout();
 };
+
+void AppearanceTest::searchCoalescesTypingAndFlushes()
+{
+    QLineEdit edit;
+    QStringList applied;
+    connectSearch(&edit,&edit,[&](const QString &text){applied.append(text);});
+    edit.show(); edit.setFocus();
+    QTest::keyClicks(&edit,"package");
+    QVERIFY(applied.isEmpty());
+    QTRY_COMPARE(applied.size(),1);
+    QCOMPARE(applied.last(),QStringLiteral("package"));
+    QTest::keyClicks(&edit,"-name");
+    QTest::keyClick(&edit,Qt::Key_Return);
+    QCOMPARE(applied.size(),2);
+    QCOMPARE(applied.last(),QStringLiteral("package-name"));
+    edit.setText(QStringLiteral("pending"));
+    edit.clear();
+    QCOMPARE(applied.size(),3);
+    QCOMPARE(applied.last(),QString());
+    QTest::qWait(220);
+    QCOMPARE(applied.size(),3); // Enter and clear cancel stale callbacks.
+}
+
+void AppearanceTest::keyboardNavigationSearchAndRefresh()
+{
+    AppearanceManager manager;
+    QVERIFY(manager.apply({QStringLiteral("en"),13}));
+    QTemporaryDir root;
+    MainWindow window; window.setScanRoot(root.path()); window.show(); window.activateWindow();
+    QTRY_VERIFY_WITH_TIMEOUT(window.isSettled(),10000);
+    QTest::keyClick(&window,Qt::Key_F,Qt::ControlModifier);
+    QCOMPARE(window.viewState().page,1);
+    auto *search=window.findChild<QLineEdit*>("appsSearch");
+    QVERIFY(search && search->hasFocus());
+    auto *apps=window.findChild<QTableView*>("appsTable");
+    const int count=apps->model()->rowCount();
+    QVERIFY(count>0);
+    QTest::keyClicks(search,"DISKLENS_NO_SUCH_PACKAGE_09324");
+    QTest::keyClick(search,Qt::Key_Return);
+    QCOMPARE(apps->model()->rowCount(),0);
+    search->clear(); QCOMPARE(apps->model()->rowCount(),count);
+    QTest::keyClick(&window,Qt::Key_3,Qt::AltModifier);
+    QCOMPARE(window.viewState().page,2);
+    auto *files=window.findChild<QTableView*>("filesTable");
+    QCOMPARE(files->model()->rowCount(),0);
+    QFile file(root.filePath("large.bin"));
+    QVERIFY(file.open(QIODevice::WriteOnly)); QVERIFY(file.resize(128*1024*1024)); file.close();
+    QTest::keyClick(&window,Qt::Key_F5);
+    QTRY_COMPARE_WITH_TIMEOUT(files->model()->rowCount(),1,10000);
+    QTest::keyClick(&window,Qt::Key_F,Qt::ControlModifier);
+    QVERIFY(window.findChild<QLineEdit*>("filesSearch")->hasFocus());
+    QTest::keyClick(&window,Qt::Key_1,Qt::AltModifier);
+    QCOMPARE(window.viewState().page,0);
+}
+
+void AppearanceTest::overviewResponsiveLayout_data()
+{
+    QTest::addColumn<QString>("language"); QTest::addColumn<int>("size"); QTest::addColumn<int>("width");
+    for(const QString &language : {QStringLiteral("en"),QStringLiteral("zh_CN")})
+        for(int size : {13,18}) for(int width : {1080,1280})
+            QTest::newRow(qPrintable(QStringLiteral("%1-%2-%3").arg(language).arg(size).arg(width))) << language << size << width;
+}
+
+void AppearanceTest::overviewResponsiveLayout()
+{
+    QFETCH(QString,language); QFETCH(int,size); QFETCH(int,width);
+    AppearanceManager manager; QVERIFY(manager.apply({language,size}));
+    QTemporaryDir root;
+    MainWindow window; window.setScanRoot(root.path()); window.resize(width,860); window.show();
+    QTRY_VERIFY_WITH_TIMEOUT(window.isSettled(),10000);
+    QTest::qWait(80);
+    auto *stack=window.findChild<QStackedWidget*>();
+    auto *scroll=qobject_cast<QScrollArea*>(stack->currentWidget());
+    QVERIFY(scroll);
+    QVERIFY2(scroll->widget()->width()<=scroll->viewport()->width(),"Overview must fit without horizontal scrolling");
+    auto *disk=window.findChild<QFrame*>("diskCard"); QVERIFY(disk);
+    const auto values=scroll->widget()->findChildren<QLabel*>("metricValue");
+    QCOMPARE(values.size(),2);
+    for(auto *value:values) {
+        QVERIFY(value->width()>=value->fontMetrics().horizontalAdvance(value->text()));
+        const QPoint top=value->mapTo(scroll->widget(),QPoint());
+        QVERIFY(top.x()>=0 && top.x()+value->width()<=scroll->widget()->width());
+    }
+    // Large-font cards wrap below the disk panel; wide default text stays alongside.
+    const int diskBottom=disk->mapTo(scroll->widget(),disk->rect().bottomLeft()).y();
+    const int valueTop=values.first()->mapTo(scroll->widget(),QPoint()).y();
+    if(size==18 || width==1080) QVERIFY(valueTop>diskBottom);
+    else QVERIFY(valueTop<diskBottom);
+}
 
 void AppearanceTest::settingsRoundTripAndInvalidFallback()
 {
@@ -83,6 +177,7 @@ void AppearanceTest::actualLanguageAndFontWithViewRestore()
     QCOMPARE(navigation[0]->text(),QStringLiteral("空间总览"));
     const int initialFont=navigation[0]->font().pixelSize();
     const int initialRow=window->findChild<QTableView*>("developerTable")->verticalHeader()->defaultSectionSize();
+    const int initialColumn=window->findChild<QTableView*>("developerTable")->columnWidth(0);
     const auto state=window->viewState();
     window.reset();
     QVERIFY2(manager.apply({QStringLiteral("en"),17},false,&error),qPrintable(error));
@@ -104,6 +199,7 @@ void AppearanceTest::actualLanguageAndFontWithViewRestore()
     auto *table=window->findChild<QTableView*>("developerTable");
     QVERIFY(table);
     QVERIFY(table->verticalHeader()->defaultSectionSize()>initialRow);
+    QVERIFY(table->columnWidth(0)>initialColumn);
     // A local per-widget font rule must grow too, rather than only the base font.
     auto *status=window->findChild<QLabel*>("developerStatus");
     QVERIFY(status);

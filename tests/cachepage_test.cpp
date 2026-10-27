@@ -129,7 +129,7 @@ void CachePageTest::filtersAndSelection()
     QString error; QVERIFY2(page.verifyUi(&error),qPrintable(error));
     const auto c=controls(page); QVERIFY(valid(c));
     QCOMPARE(c.table->model()->rowCount(),4); QVERIFY(!c.clean->isEnabled());
-    c.search->setText("app-cache"); QCOMPARE(c.table->model()->rowCount(),2);
+    c.search->setText("app-cache"); QTRY_COMPARE(c.table->model()->rowCount(),2);
     c.logs->setChecked(true); QCOMPARE(c.table->model()->rowCount(),1);
     c.search->clear(); QCOMPARE(c.table->model()->rowCount(),2);
     c.logs->setChecked(false); QCOMPARE(c.table->model()->rowCount(),4);
@@ -146,7 +146,7 @@ void CachePageTest::checkboxClickAndHiddenSelection()
     page.resize(1100,760); page.show(); page.ensureScanStarted();
     QTRY_VERIFY_WITH_TIMEOUT(page.isSettled(),10000);
     const auto c=controls(page); QVERIFY(valid(c));
-    c.search->setText("app-small"); QCOMPARE(c.table->model()->rowCount(),1);
+    c.search->setText("app-small"); QTRY_COMPARE(c.table->model()->rowCount(),1);
     const QModelIndex check=c.table->model()->index(0,0);
     QVERIFY(check.flags() & Qt::ItemIsUserCheckable);
     QString diagnostic; const QRect indicator=visibleCheckIndicator(c.table,check,&diagnostic);
@@ -155,7 +155,7 @@ void CachePageTest::checkboxClickAndHiddenSelection()
     QCOMPARE(check.data(Qt::CheckStateRole).toInt(),int(Qt::Checked)); QVERIFY(c.clean->isEnabled());
     c.search->setText("editor"); QVERIFY(c.clean->isEnabled());
     auto *summary=page.findChild<QLabel*>("cacheSelectionSummary"); QVERIFY(summary);
-    QVERIFY(summary->text().contains(QStringLiteral("筛选外")));
+    QTRY_VERIFY(summary->text().contains(QStringLiteral("筛选外")));
     c.clear->click(); QVERIFY(!c.clean->isEnabled());
     QVERIFY(QFileInfo::exists(temporary.path()+"/cache/app-small/download.bin"));
 }
@@ -167,7 +167,7 @@ void CachePageTest::productionCheckboxVisibleCenter()
     page.resize(1100,760); page.show(); page.ensureScanStarted();
     QTRY_VERIFY_WITH_TIMEOUT(page.isSettled(),10000);
     const auto c=controls(page); QVERIFY(valid(c));
-    c.search->setText("app-small"); QCOMPARE(c.table->model()->rowCount(),1);
+    c.search->setText("app-small"); QTRY_COMPARE(c.table->model()->rowCount(),1);
     c.search->setFocus(); QCoreApplication::processEvents();
     const QModelIndex check=c.table->model()->index(0,0);
     QCOMPARE(check.data(Qt::CheckStateRole).toInt(),int(Qt::Unchecked));
@@ -201,7 +201,7 @@ void CachePageTest::rowClickAndSpaceToggle()
     page.resize(1100,760); page.show(); page.ensureScanStarted();
     QTRY_VERIFY_WITH_TIMEOUT(page.isSettled(),10000);
     const auto c=controls(page); QVERIFY(valid(c));
-    c.search->setText("app-small"); QCOMPARE(c.table->model()->rowCount(),1);
+    c.search->setText("app-small"); QTRY_COMPARE(c.table->model()->rowCount(),1);
     const QModelIndex check=c.table->model()->index(0,0), name=c.table->model()->index(0,1);
     const QRect clickedCell=c.table->visualRect(c.table->model()->index(0,column));
     const QPoint point(edge<0 ? clickedCell.left()+10 : edge>0 ? clickedCell.right()-8 : clickedCell.center().x(),clickedCell.center().y());
@@ -232,7 +232,7 @@ void CachePageTest::selectedNumberTextRemainsReadable()
     page.resize(1100,760); page.show(); page.ensureScanStarted();
     QTRY_VERIFY_WITH_TIMEOUT(page.isSettled(),10000);
     const auto c=controls(page); QVERIFY(valid(c));
-    c.search->setText("app-small"); QCOMPARE(c.table->model()->rowCount(),1);
+    c.search->setText("app-small"); QTRY_COMPARE(c.table->model()->rowCount(),1);
     // Row selection is independent from cleanup checkbox state. This directly
     // exercises the user's pale-background/white-numeric-text symptom.
     c.table->setCurrentIndex(c.table->model()->index(0,1)); c.table->selectRow(0); c.table->setFocus();
@@ -265,7 +265,7 @@ void CachePageTest::confirmationCancelPreservesFiles()
     CachePage page; page.setRoots(temporary.path()+"/cache",temporary.path()+"/state");
     page.ensureScanStarted(); QTRY_VERIFY_WITH_TIMEOUT(page.isSettled(),10000);
     const auto c=controls(page); QVERIFY(valid(c));
-    c.search->setText("app-small"); QCOMPARE(c.table->model()->rowCount(),1);
+    c.search->setText("app-small"); QTRY_COMPARE(c.table->model()->rowCount(),1);
     c.selectVisible->click(); QVERIFY(c.clean->isEnabled()); bool canceled=false;
     QTimer dismiss; dismiss.setInterval(10);
     connect(&dismiss,&QTimer::timeout,&page,[&] {
@@ -284,7 +284,7 @@ void CachePageTest::selectedCleanupAndRescan()
     CachePage page; page.setRoots(temporary.path()+"/cache",temporary.path()+"/state");
     page.ensureScanStarted(); QTRY_VERIFY_WITH_TIMEOUT(page.isSettled(),10000);
     const auto c=controls(page); QVERIFY(valid(c));
-    c.search->setText("app-small"); QCOMPARE(c.table->model()->rowCount(),1);
+    c.search->setText("app-small"); QTRY_COMPARE(c.table->model()->rowCount(),1);
     c.selectVisible->click(); QVERIFY(c.clean->isEnabled());
     QSignalSpy spaceChanged(&page,&CachePage::spaceChanged); bool confirmed=false,resultShown=false;
     QTimer interact; interact.setInterval(10);

@@ -52,7 +52,7 @@ void DeveloperPageTest::lazyScanningFilterDetailsAndExport()
     page.resize(1150, 850); page.show(); page.ensureScanStarted();
     QTRY_VERIFY_WITH_TIMEOUT(page.isSettled(), 10000);
     QVERIFY2(page.verifyUi(&error), qPrintable(error)); QCOMPARE(table->model()->rowCount(), 3);
-    search->setText(QStringLiteral("recording")); QCOMPARE(table->model()->rowCount(), 1);
+    search->setText(QStringLiteral("recording")); QTRY_COMPARE(table->model()->rowCount(), 1);
     const auto index = table->model()->index(0, 1);
     QTest::mouseClick(table->viewport(), Qt::LeftButton, Qt::NoModifier, table->visualRect(index).center());
     QVERIFY(copy->isEnabled()); QVERIFY(detail->text().contains(QStringLiteral("原始采集数据")));
@@ -60,7 +60,7 @@ void DeveloperPageTest::lazyScanningFilterDetailsAndExport()
     copy->click(); QCOMPARE(QApplication::clipboard()->text(), dir.path() + "/recording");
     category->setCurrentIndex(category->findData(int(DeveloperCategory::Conda))); QCOMPARE(table->model()->rowCount(), 0);
     category->setCurrentIndex(0); search->clear(); QCOMPARE(table->model()->rowCount(), 3);
-    search->setText(QStringLiteral("DISKLENS_MISSING")); QCOMPARE(table->model()->rowCount(), 0);
+    search->setText(QStringLiteral("DISKLENS_MISSING")); QTRY_COMPARE(table->model()->rowCount(), 0);
     QVERIFY2(page.exportReport(dir.path() + "/report.csv", &error), qPrintable(error));
     QFile report(dir.path() + "/report.csv"); QVERIFY(report.open(QIODevice::ReadOnly)); const QByteArray csv = report.readAll();
     QVERIFY(csv.contains("recording")); QVERIFY(csv.contains("robot/build")); QVERIFY(csv.contains("clouds"));
@@ -76,7 +76,7 @@ void DeveloperPageTest::productionSelectedTextAndCancel()
     QTRY_VERIFY_WITH_TIMEOUT(page.isSettled(), 10000);
     auto *table = page.findChild<QTableView *>("developerTable"); QVERIFY(table);
     auto *search = page.findChild<QLineEdit *>("developerSearch"); QVERIFY(search);
-    search->setText(QStringLiteral("recording")); QCOMPARE(table->model()->rowCount(), 1);
+    search->setText(QStringLiteral("recording")); QTRY_COMPARE(table->model()->rowCount(), 1);
     table->selectRow(0); table->setFocus(); QCoreApplication::processEvents();
     const QRect cell = table->visualRect(table->model()->index(0, 2)); QVERIFY(cell.isValid());
     const QImage image = table->viewport()->grab(cell).toImage();

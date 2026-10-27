@@ -1,5 +1,25 @@
 # Changelog / 更新记录
 
+## Unreleased — UI refresh / 界面优化（2026-10-27）
+
+### English
+
+- Refresh the workspace with a light sidebar, a dark disk-usage card, clearer secondary text and consistent controls, tables and scrollbars.
+- Reflow overview cards on smaller windows and larger fonts; scale the disk chart, ranking and table columns to keep values readable.
+- Coalesce search typing across all five searchable pages; Enter applies immediately and clearing restores results immediately. Cache icons used during repeated table/tree painting.
+- Add `Ctrl+F` for the current search, `Alt+1`–`Alt+6` for pages, and `F5` for refreshing the current view. Large-file refresh now starts a new scan; Enter in its directory field also starts scanning.
+- Keep content in place while inventory progress appears or disappears. Preserve full-row/Space cache selection and selection contrast.
+- Add production-style regression coverage for keyboard workflows, search timing and eight overview language/font/window combinations; refresh documentation screenshots.
+
+### 简体中文
+
+- 采用浅色侧栏与深蓝磁盘概览卡，提高辅助文字对比度，统一按钮、表格、输入框和滚动条。
+- 首页卡片随窗口宽度和字号重新排列；磁盘环图、排行和表格列宽适配大字号，保持数值可读。
+- 五个可搜索页面合并连续输入后的筛选更新；回车立即筛选，清空立即恢复。缓存列表与目录树绘制中重复使用的图标。
+- 新增 `Ctrl+F` 定位当前搜索、`Alt+1`–`Alt+6` 切换页面、`F5` 刷新当前视图。大文件页刷新会重新扫描，目录输入框也支持回车启动。
+- 软件信息加载进度显示/隐藏时保持内容位置，保留缓存整行/空格勾选与选中文字对比度。
+- 增加正式样式下的快捷键、搜索时序及八种首页语言/字号/窗口组合回归检查，更新文档截图。
+
 ## 1.3.0 — 2026-10-18
 
 ### English

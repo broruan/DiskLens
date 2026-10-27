@@ -166,6 +166,8 @@ void styleTree(QTreeWidget *tree)
     tree->setRootIsDecorated(true);
     tree->setAlternatingRowColors(false);
     tree->setUniformRowHeights(true);
+    tree->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+    tree->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
     tree->setSelectionMode(QAbstractItemView::SingleSelection);
     tree->setSelectionBehavior(QAbstractItemView::SelectRows);
     tree->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -261,7 +263,7 @@ protected:
         painter.setPen(QColor("#34415c")); QFont title = font(); title.setBold(true); painter.setFont(title);
         painter.drawText(QRect(12, 6, width() - 24, fontMetrics().height()), Qt::AlignVCenter,
             QFontMetrics(title).elidedText(dlTr("当前层 · 实际占用"), Qt::ElideRight, width()-24));
-        painter.setFont(font()); painter.setPen(QColor("#8993a7"));
+        painter.setFont(font()); painter.setPen(QColor("#6f7d95"));
         painter.drawText(subtitleRect(), Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap,
             dlTr("条长 = 项目占用 / 当前目录总占用"));
         if (m_items.isEmpty()) {
@@ -295,7 +297,7 @@ protected:
         }
         setProperty("chartTextRects",textBounds);
         setProperty("chartBarRects",barBounds);
-        painter.setPen(QColor("#8993a7"));
+        painter.setPen(QColor("#6f7d95"));
         painter.drawText(QRect(12, rowsTop()+m_items.size()*rowHeight()+4, width()-24, fontMetrics().height()), Qt::AlignVCenter,
                          dlTr("前 %1 项 · 点击进入目录").arg(m_items.size()));
     }
@@ -474,7 +476,7 @@ void ExplorerPage::createUi()
     connect(m_cancelButton, &QPushButton::clicked, this, &ExplorerPage::cancelWork);
     connect(m_up, &QPushButton::clicked, this, &ExplorerPage::navigateUp);
     connect(m_home, &QPushButton::clicked, this, [this] { showDirectory(m_directoryResult.root.path); });
-    connect(m_search, &QLineEdit::textChanged, this, [this] {
+    connectSearch(m_search, this, [this](const QString &) {
         if (m_directoryDone) showDirectory(m_currentPath);
         rebuildDuplicates();
     });

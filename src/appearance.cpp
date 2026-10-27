@@ -126,6 +126,21 @@ bool AppearanceManager::eventFilter(QObject *object, QEvent *event)
                 if (auto *table = qobject_cast<QTableView *>(widget)) {
                     const int height = table->verticalHeader()->defaultSectionSize();
                     table->verticalHeader()->setDefaultSectionSize(qRound(height * m_preferences.fontSize / 13.0));
+                    auto *header = table->horizontalHeader();
+                    if (m_preferences.fontSize > 13) {
+                        for (int column=0; column<header->count(); ++column) {
+                            if (header->sectionResizeMode(column)==QHeaderView::Stretch
+                                || (header->stretchLastSection() && column==header->count()-1)) continue;
+                            const QString title=table->model()->headerData(column,Qt::Horizontal).toString();
+                            const int textWidth=header->fontMetrics().horizontalAdvance(title)+40;
+                            table->setColumnWidth(column,qMax(textWidth,
+                                qRound(table->columnWidth(column)*m_preferences.fontSize/13.0)));
+                        }
+                    }
+                }
+                if (auto *view = qobject_cast<QAbstractItemView *>(widget)) {
+                    view->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+                    view->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
                 }
             }
         }

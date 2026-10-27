@@ -115,8 +115,13 @@ void EntryDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option,
         QColor color = m_files ? QColor("#e6f7f2") : QColor("#edf0ff");
         painter->setPen(Qt::NoPen); painter->setBrush(color); painter->drawRoundedRect(iconRect, 10, 10);
         const QString iconName=index.data(IconRole).toString();
-        QIcon icon = QFileInfo(iconName).isAbsolute() ? QIcon(iconName) : QIcon::fromTheme(iconName);
-        if (!icon.isNull()) icon.paint(painter, iconRect.adjusted(7, 7, -7, -7));
+        const QString iconKey=QIcon::themeName()+QLatin1Char(':')+iconName;
+        auto *icon=m_icons.object(iconKey);
+        if (!icon) {
+            icon=new QIcon(QFileInfo(iconName).isAbsolute() ? QIcon(iconName) : QIcon::fromTheme(iconName));
+            m_icons.insert(iconKey,icon);
+        }
+        if (!icon->isNull()) icon->paint(painter, iconRect.adjusted(7, 7, -7, -7));
         else {
             painter->setPen(m_files ? QColor("#159878") : QColor("#5265cb"));
             QFont font = option.font; font.setBold(true); font.setPixelSize(scaledUiPixels(16)); painter->setFont(font);
@@ -128,7 +133,7 @@ void EntryDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option,
                           QFontMetrics(font).elidedText(index.data().toString(), Qt::ElideRight, textRect.width()));
         font.setBold(false); if (font.pixelSize()>0) font.setPixelSize(qMax(8, font.pixelSize()-1));
         else font.setPointSizeF(qMax(8.0, font.pointSizeF()-1));
-        painter->setFont(font); painter->setPen(QColor("#8791a5"));
+        painter->setFont(font); painter->setPen(QColor("#6f7d95"));
         painter->drawText(QRect(textRect.left(), box.center().y()+scaledUiPixels(3), textRect.width(), scaledUiPixels(20)), Qt::AlignVCenter,
                           QFontMetrics(font).elidedText(index.data(SecondaryRole).toString(), Qt::ElideMiddle, textRect.width()));
     } else if (!m_files && index.column() == 1) {

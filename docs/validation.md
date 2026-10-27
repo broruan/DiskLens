@@ -1,5 +1,16 @@
 # Validation scope / 验证范围
 
+## Main branch UI refresh — 2026-10-27 / 主分支界面优化
+
+Local validation on Ubuntu 22.04 amd64, GCC 11.3 and Qt 5.15.3:
+
+- Release build and all 13 CTest targets passed. The new behavior checks cover search coalescing/Enter/clear, keyboard navigation and F5 large-file rescan, plus eight English/Chinese × 13/18 px × 1080/1280 px overview layouts.
+- 28 read-only smoke runs passed: seven pages (including duplicates) × two languages × two font sizes, using disposable scan/cache/state directories and the production Fusion style. Screenshots were reviewed for the overview, application table, cache table, file table, directory analysis, developer view and appearance dialog.
+- Translation coverage remains 540 messages; placeholder checks and `git diff --check` passed. Existing cache checkbox, whole-row click, Space and focused/unfocused contrast checks passed.
+- These are offscreen GUI and temporary-fixture checks. No manual desktop/GPU performance benchmark, real-cache cleanup or real package removal is claimed. The updated screenshots describe the main branch; released v1.3.0 binaries are unchanged.
+
+本地环境为 Ubuntu 22.04 amd64、GCC 11.3、Qt 5.15.3。Release 构建与 13 个 CTest 目标全部通过；新增检查覆盖搜索合并/回车/清空、快捷键与大文件 F5 重扫，以及中英文、13/18 px、1080/1280 px 窗口宽度的八种首页组合。七个页面（含重复文件）、两种语言、两档字号共 28 组离屏只读检查通过，使用临时扫描/缓存/状态目录，并核对了正式样式截图。540 条翻译及占位符、缓存勾选/空格/选中对比度回归均通过。上述结果不代表人工桌面/GPU 性能基准或真实卸载/用户缓存清理验证；截图对应 main 分支，v1.3.0 发布包未改动。
+
 [Build instructions](building.md) · [CI runs](https://github.com/broruan/DiskLens/actions/workflows/build.yml)
 
 ## Version 1.3.0 / 版本 1.3.0

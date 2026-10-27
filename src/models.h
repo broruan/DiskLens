@@ -1,4 +1,6 @@
 #pragma once
+#include <QCache>
+#include <QIcon>
 
 #include "types.h"
 #include <QAbstractTableModel>
@@ -57,4 +59,5 @@ public:
     QSize sizeHint(const QStyleOptionViewItem &, const QModelIndex &) const override;
 private:
     bool m_files;
+    mutable QCache<QString, QIcon> m_icons{256};
 };

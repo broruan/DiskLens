@@ -237,7 +237,7 @@ void DeveloperPage::createUi()
     m_progress->setRange(0, 0); m_progress->setTextVisible(false); m_progress->setFixedWidth(140); m_progress->setFixedHeight(6);
     statusRow->addWidget(m_progress); layout->addLayout(statusRow);
 
-    connect(m_search, &QLineEdit::textChanged, this, [this](const QString &text) { m_filter->setSearch(text); updateCount(); updateDetail(); });
+    connectSearch(m_search, this, [this](const QString &text) { m_filter->setSearch(text); updateCount(); updateDetail(); });
     connect(m_category, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index) {
         m_filter->setCategory(m_category->itemData(index).toInt()); updateCount(); updateDetail();
     });

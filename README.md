@@ -23,6 +23,8 @@
 
 DiskLens is a Qt Widgets desktop application written in C++17. It reads your machine's filesystem and package-manager data locally. **Switch between English and Simplified Chinese in the application and adjust the interface font size.** Project documentation is also available in both languages. Screenshots show the real application with example scan data; installed-package information is read from the machine used to capture them.
 
+**Main branch UI preview:** a light workspace, responsive overview cards, clearer tables, debounced search, and keyboard navigation (`Ctrl+F`, `Alt+1`–`Alt+6`, `F5`). Screenshots below show this development version; published v1.3.0 packages retain the earlier interface. See [keyboard workflows](docs/usage.md) and [validation](docs/validation.md).
+
 ## Why DiskLens
 
 - One Ubuntu workflow for installed packages, their associated user directories, large files and selected cache cleanup.

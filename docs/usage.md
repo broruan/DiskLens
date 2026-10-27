@@ -6,6 +6,20 @@
 
 DiskLens supports English and Simplified Chinese. The English navigation labels are **Overview**, **Installed apps**, **Large files**, **Cache & logs**, **Space explorer**, and **Developer tools**.
 
+### Faster navigation
+
+The current main branch adds these shortcuts:
+
+| Shortcut | Action |
+| --- | --- |
+| `Ctrl+F` | Focus and select the current page's search. On Overview, open Installed apps search. |
+| `Alt+1`–`Alt+6` | Open the corresponding sidebar page, from Overview to Developer tools. |
+| `F5` | Refresh the current view; on Large files, repeat the scan with the current directory and threshold. |
+| `Enter` in search | Apply the search immediately. Typing otherwise updates results after a short pause; clearing restores all matching rows immediately. |
+| `Enter` in the Large files directory field | Start the scan. |
+
+Overview cards reflow when the window is narrower or the font is larger. Tables and directory trees scroll by pixels; larger fonts also widen table columns. Existing selection and cleanup confirmation behavior is unchanged.
+
 ### Appearance
 
 Open **Language & font** at the bottom of the sidebar. Choose **English** or **简体中文** and a font size from **11–18 px (default: 13 px)**. The preview helps compare sizes before you click **Apply**. The language and font size take effect immediately and are saved for future launches.
@@ -83,6 +97,12 @@ These checks are not a security isolation boundary against a malicious process r
 Allocated-byte totals come from file block counts. They do not guarantee an equal immediate increase in available disk space; for example, another process may still hold a deleted file open. Refresh the volume view to inspect actual available space.
 
 ## 简体中文
+
+### 快捷操作
+
+当前 main 分支新增：`Ctrl+F` 定位并全选当前页搜索词（总览页会打开软件搜索），`Alt+1`–`Alt+6` 按侧栏顺序切页，`F5` 刷新当前视图。大文件页刷新会按当前目录和阈值重新扫描；在目录输入框中按回车也可启动。
+
+连续输入搜索词后会稍作等待再筛选，按回车立即应用，清空搜索立即恢复。首页卡片随窗口宽度与字号重排；表格和目录树按像素滚动，大字号同时增大表格列宽。缓存选择与清理确认流程保持原有行为。
 
 ### 语言与字体
 

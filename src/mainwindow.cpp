@@ -19,6 +19,7 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFrame>
+#include <QGridLayout>
 #include <QHeaderView>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -28,6 +29,8 @@
 #include <QProgressBar>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QShortcut>
+#include <QResizeEvent>
 #include <QSignalBlocker>
 #include <QStackedWidget>
 #include <QStatusBar>
@@ -40,6 +43,44 @@
 #include <algorithm>
 
 namespace {
+// Give translated, larger text its own row instead of squeezing metric cards.
+class OverviewCards final : public QWidget {
+public:
+    OverviewCards(QWidget *disk, QWidget *apps, QWidget *files)
+        : m_disk(disk), m_apps(apps), m_files(files), m_grid(new QGridLayout(this))
+    {
+        m_grid->setContentsMargins(0,0,0,0);
+        m_grid->setSpacing(16);
+        m_grid->setSizeConstraint(QLayout::SetNoConstraint);
+        arrange(true);
+    }
+    QSize minimumSizeHint() const override { return {0,m_grid->minimumSize().height()}; }
+protected:
+    void resizeEvent(QResizeEvent *event) override
+    {
+        QWidget::resizeEvent(event);
+        const bool compact = event->size().width() < scaledUiPixels(880);
+        if (compact != m_compact) arrange(compact);
+    }
+private:
+    void arrange(bool compact)
+    {
+        m_compact = compact;
+        m_grid->removeWidget(m_disk); m_grid->removeWidget(m_apps); m_grid->removeWidget(m_files);
+        for (int i=0;i<3;++i) m_grid->setColumnStretch(i,0);
+        if (compact) {
+            m_grid->addWidget(m_disk,0,0,1,2);
+            m_grid->addWidget(m_apps,1,0); m_grid->addWidget(m_files,1,1);
+            m_grid->setColumnStretch(0,1); m_grid->setColumnStretch(1,1);
+        } else {
+            m_grid->addWidget(m_disk,0,0); m_grid->addWidget(m_apps,0,1); m_grid->addWidget(m_files,0,2);
+            m_grid->setColumnStretch(0,6); m_grid->setColumnStretch(1,4); m_grid->setColumnStretch(2,4);
+        }
+    }
+    QWidget *m_disk, *m_apps, *m_files;
+    QGridLayout *m_grid;
+    bool m_compact = false;
+};
 QLabel *label(const QString &text, const char *name = nullptr)
 {
     auto *result = new QLabel(text);
@@ -64,6 +105,7 @@ QWidget *scrollablePage(QWidget *page)
     scroll->setStyleSheet(QStringLiteral("QScrollArea#pageScroll { background:transparent; border:0; }"));
     page->layout()->setSizeConstraint(QLayout::SetMinAndMaxSize);
     scroll->setWidget(page);
+    page->setAutoFillBackground(false);
     return scroll;
 }
 QPushButton *button(const QString &text, const QString &icon = {}, const char *name = nullptr)
@@ -234,23 +276,28 @@ bool MainWindow::isSettled() const
 void MainWindow::createUi()
 {
     auto *shell=new QWidget; auto *shellLayout=new QHBoxLayout(shell); shellLayout->setContentsMargins(0,0,0,0); shellLayout->setSpacing(0);
-    auto *sidebar=new QFrame; sidebar->setObjectName("sidebar"); sidebar->setFixedWidth(205 + qMax(0, qApp->property("disklensFontSize").toInt()-13)*8);
-    auto *side=new QVBoxLayout(sidebar); side->setContentsMargins(19,32,19,24); side->setSpacing(8);
+    auto *sidebar=new QFrame; sidebar->setObjectName("sidebar"); sidebar->setFixedWidth(212 + qMax(0, qApp->property("disklensFontSize").toInt()-13)*8);
+    auto *side=new QVBoxLayout(sidebar); side->setContentsMargins(18,28,18,22); side->setSpacing(7);
     auto *logo=new QLabel; logo->setPixmap(QIcon(":/disklens.svg").pixmap(42,42));
     auto *brandRow=new QHBoxLayout; brandRow->setSpacing(11); brandRow->addWidget(logo); brandRow->addWidget(label("DiskLens","brand")); brandRow->addStretch();
     side->addLayout(brandRow); side->addWidget(label(dlTr("磁盘透镜  /  空间管理"),"brandSub")); side->addSpacing(37);
     side->addWidget(label(dlTr("工作空间"),"sideCaption")); side->addSpacing(5);
     const QStringList names{dlTr("空间总览"),dlTr("已安装软件"),dlTr("大文件"),dlTr("缓存与日志"),dlTr("空间分析"),dlTr("开发环境")};
-    const QStringList icons{"grid","apps","files","trash","grid","folder"};
+    const QStringList icons{"grid","apps","files","trash","chart","code"};
     for(int i=0;i<names.size();++i) {
         auto *nav=button(names[i]); nav->setObjectName("navButton"); nav->setCheckable(true);
-        nav->setIcon(lineIcon(icons[i],QColor("#a4b4d2"))); nav->setIconSize({20,20});
+        QIcon icon = lineIcon(icons[i],QColor("#7786a1"));
+        icon.addPixmap(lineIcon(icons[i],QColor("#4a61d0")).pixmap(48,48),QIcon::Normal,QIcon::On);
+        nav->setIcon(icon); nav->setIconSize({20,20});
+        const QKeySequence key(QStringLiteral("Alt+%1").arg(i+1));
+        nav->setToolTip(names[i]+QStringLiteral("  (%1)").arg(key.toString(QKeySequence::NativeText)));
+        auto *shortcut = new QShortcut(key,this);
+        connect(shortcut,&QShortcut::activated,nav,&QPushButton::click);
         side->addWidget(nav); m_nav.append(nav); connect(nav,&QPushButton::clicked,this,[this,i]{setPage(i);});
     }
     side->addStretch();
     m_appearance=button(dlTr("语言与字体"),{},"appearanceButton");
     m_appearance->setToolTip(dlTr("切换界面语言和字体大小"));
-    m_appearance->setStyleSheet("text-align:left;background:#22314d;color:#c4d0e5;border-color:#354560;");
     connect(m_appearance,&QPushButton::clicked,this,&MainWindow::showAppearanceSettings);
     side->addWidget(m_appearance);
     side->addSpacing(8);
@@ -260,38 +307,54 @@ void MainWindow::createUi()
         m_appearance->setEnabled(!m_uninstaller->isBusy() && !m_cachePage->isCleaning() && !QApplication::activeModalWidget());
     });
     appearanceGuard->start(100);
-    auto *divider=new QFrame; divider->setFixedHeight(1); divider->setStyleSheet("background:#2c3b53;"); side->addWidget(divider); side->addSpacing(15);
+    auto *divider=new QFrame; divider->setFixedHeight(1); divider->setStyleSheet("background:#e8edf5;"); side->addWidget(divider); side->addSpacing(15);
     side->addWidget(label(dlTr("●  本机 · Ubuntu / Debian"),"brandSub"));
     side->addWidget(label(dlTr("本地统计 · 无需联网"),"sideCaption"));
     shellLayout->addWidget(sidebar);
     auto *workspace=new QWidget; workspace->setObjectName("workspace");
-    auto *content=new QVBoxLayout(workspace); content->setContentsMargins(30,28,30,14); content->setSpacing(18);
+    auto *content=new QVBoxLayout(workspace); content->setContentsMargins(28,28,28,16); content->setSpacing(16);
     auto *header=new QHBoxLayout; auto *titles=new QVBoxLayout; titles->setSpacing(5);
-    m_title=label({},"pageTitle"); m_title->setWordWrap(true); m_subtitle=label({},"subtitle"); m_subtitle->setWordWrap(true); titles->addWidget(m_title); titles->addWidget(m_subtitle); header->addLayout(titles); header->addStretch();
+    m_title=label({},"pageTitle"); m_title->setWordWrap(true); m_subtitle=label({},"subtitle"); m_subtitle->setWordWrap(true); titles->addWidget(m_title); titles->addWidget(m_subtitle); header->addLayout(titles,1);
     m_warningButton=button(dlTr("数据提示")); m_warningButton->hide(); connect(m_warningButton,&QPushButton::clicked,this,&MainWindow::showWarnings); header->addWidget(m_warningButton);
     m_refresh=button(dlTr("刷新数据"),"refresh"); connect(m_refresh,&QPushButton::clicked,this,[this]{
-        reloadInventory();refreshStorage();
+        refreshStorage();
+        if(m_pages->currentIndex()<=1)reloadInventory();
+        if(m_pages->currentIndex()==0 || m_pages->currentIndex()==2)startScan();
         if(m_pages->currentIndex()==3)m_cachePage->rescan();
         if(m_pages->currentIndex()==4)m_explorerPage->rescan();
         if(m_pages->currentIndex()==5)m_developerPage->rescan();
     }); header->addWidget(m_refresh);
+    m_refresh->setToolTip(dlTr("刷新数据")+QStringLiteral("  (F5)"));
+    connect(new QShortcut(QKeySequence(Qt::Key_F5),this),&QShortcut::activated,m_refresh,&QPushButton::click);
     content->addLayout(header);
     m_inventoryProgress=new QProgressBar; m_inventoryProgress->setRange(0,0); m_inventoryProgress->setTextVisible(false); m_inventoryProgress->setFixedHeight(3); content->addWidget(m_inventoryProgress);
+    auto progressPolicy=m_inventoryProgress->sizePolicy(); progressPolicy.setRetainSizeWhenHidden(true); m_inventoryProgress->setSizePolicy(progressPolicy);
     m_pages=new QStackedWidget; m_pages->addWidget(scrollablePage(createOverview())); m_pages->addWidget(scrollablePage(createAppsPage())); m_pages->addWidget(scrollablePage(createFilesPage()));
     m_cachePage=new CachePage; m_pages->addWidget(scrollablePage(m_cachePage));
     m_explorerPage=new ExplorerPage; m_pages->addWidget(scrollablePage(m_explorerPage));
     m_developerPage=new DeveloperPage; m_pages->addWidget(scrollablePage(m_developerPage));
+    connect(new QShortcut(QKeySequence::Find,this),&QShortcut::activated,this,[this] {
+        if(m_pages->currentIndex()==0)setPage(1);
+        QLineEdit *search=nullptr;
+        switch(m_pages->currentIndex()) {
+        case 1: search=m_search; break;
+        case 2: search=m_fileSearch; break;
+        case 3: search=m_cachePage->findChild<QLineEdit*>("cacheSearch"); break;
+        case 4: search=m_explorerPage->findChild<QLineEdit*>("explorerSearch"); break;
+        case 5: search=m_developerPage->findChild<QLineEdit*>("developerSearch"); break;
+        }
+        if(search){search->setFocus(Qt::ShortcutFocusReason);search->selectAll();}
+    });
     connect(m_cachePage,&CachePage::spaceChanged,this,[this]{refreshStorage();if(!m_scanActive)startScan();});
     content->addWidget(m_pages,1);
-    auto *bottom=new QHBoxLayout; bottom->addWidget(label(dlTr("●  仅显示本机已安装软件"),"muted")); bottom->addStretch(); m_updateLabel=label(dlTr("正在读取本机数据…"),"muted"); bottom->addWidget(m_updateLabel); content->addLayout(bottom);
+    auto *bottom=new QHBoxLayout; auto *localStatus=label(dlTr("●  仅显示本机已安装软件"),"muted"); localStatus->setWordWrap(false); bottom->addWidget(localStatus); bottom->addStretch(); m_updateLabel=label(dlTr("正在读取本机数据…"),"muted"); bottom->addWidget(m_updateLabel); content->addLayout(bottom);
     shellLayout->addWidget(workspace,1); setCentralWidget(shell); setPage(0); refreshStorage();
 }
 
 QWidget *MainWindow::createOverview()
 {
     auto *page=new QWidget; auto *layout=new QVBoxLayout(page); layout->setContentsMargins(0,0,0,0); layout->setSpacing(18);
-    auto *top=new QHBoxLayout; top->setSpacing(16);
-    auto *disk=card(); auto *diskLayout=new QVBoxLayout(disk); diskLayout->setContentsMargins(21,18,21,17); diskLayout->setSpacing(4);
+    auto *disk=card(); disk->setObjectName("diskCard"); auto *diskLayout=new QVBoxLayout(disk); diskLayout->setContentsMargins(22,20,22,20); diskLayout->setSpacing(6);
     auto *diskTitle=new QHBoxLayout; diskTitle->addWidget(label(dlTr("磁盘使用情况"),"cardTitle")); diskTitle->addStretch();
     m_volumes=new QComboBox; m_volumes->setMaximumWidth(180); m_volumes->setMinimumWidth(90);
     connect(m_volumes,qOverload<int>(&QComboBox::currentIndexChanged),this,[this]{refreshStorage();}); diskTitle->addWidget(m_volumes); diskLayout->addLayout(diskTitle);
@@ -299,17 +362,17 @@ QWidget *MainWindow::createOverview()
     auto *diskValues=new QVBoxLayout; diskValues->setSpacing(5); diskValues->addStretch();
     m_diskUsed=label(QStringLiteral("—"),"smallValue"); diskValues->addWidget(m_diskUsed); diskValues->addWidget(label(dlTr("已使用"),"muted")); diskValues->addSpacing(10);
     m_diskAvailable=label(dlTr("可用 —")); diskValues->addWidget(m_diskAvailable); m_diskTotal=label({},"muted"); diskValues->addWidget(m_diskTotal); diskValues->addStretch();
-    diskBody->addLayout(diskValues,1); diskLayout->addLayout(diskBody,1); m_diskReserved=label({},"muted"); diskLayout->addWidget(m_diskReserved); top->addWidget(disk,6);
+    diskBody->addLayout(diskValues,1); diskLayout->addLayout(diskBody,1); m_diskReserved=label({},"muted"); diskLayout->addWidget(m_diskReserved);
     auto *apps=card(); auto *appsLayout=new QVBoxLayout(apps); appsLayout->setContentsMargins(21,21,21,21); appsLayout->setSpacing(10);
-    auto *appHead=new QHBoxLayout; appHead->addWidget(label(dlTr("已安装的软件"),"cardTitle")); appHead->addStretch(); auto *appIcon=new QLabel; appIcon->setPixmap(lineIcon("apps",QColor("#7788e6")).pixmap(25,25)); appHead->addWidget(appIcon); appsLayout->addLayout(appHead);
+    auto *appHead=new QHBoxLayout; appHead->addWidget(label(dlTr("已安装的软件"),"cardTitle")); appHead->addStretch(); auto *appIcon=new QLabel; appIcon->setObjectName("metricIcon"); appIcon->setPixmap(lineIcon("apps",QColor("#667bdf")).pixmap(22,22)); appHead->addWidget(appIcon); appsLayout->addLayout(appHead);
     appsLayout->addStretch(); m_appSize=label(QStringLiteral("—"),"metricValue"); appsLayout->addWidget(m_appSize); appsLayout->addWidget(label(dlTr("软件包体积 · 估算"),"muted"));
     m_appSummary=label(dlTr("读取中…"),"muted"); appsLayout->addWidget(m_appSummary); appsLayout->addStretch();
-    auto *appsLink=button(dlTr("管理已安装软件  →"),{},"link"); appsLink->setStyleSheet("text-align:left;"); connect(appsLink,&QPushButton::clicked,this,[this]{setPage(1);}); appsLayout->addWidget(appsLink); top->addWidget(apps,4);
+    auto *appsLink=button(dlTr("管理已安装软件  →"),{},"link"); appsLink->setStyleSheet("text-align:left;"); connect(appsLink,&QPushButton::clicked,this,[this]{setPage(1);}); appsLayout->addWidget(appsLink);
     auto *large=card(); auto *largeLayout=new QVBoxLayout(large); largeLayout->setContentsMargins(21,21,21,21); largeLayout->setSpacing(10);
-    auto *largeHead=new QHBoxLayout; largeHead->addWidget(label(dlTr("发现的大文件"),"cardTitle")); largeHead->addStretch(); auto *fileIcon=new QLabel; fileIcon->setPixmap(lineIcon("files",QColor("#39b59c")).pixmap(25,25)); largeHead->addWidget(fileIcon); largeLayout->addLayout(largeHead);
+    auto *largeHead=new QHBoxLayout; largeHead->addWidget(label(dlTr("发现的大文件"),"cardTitle")); largeHead->addStretch(); auto *fileIcon=new QLabel; fileIcon->setObjectName("fileMetricIcon"); fileIcon->setPixmap(lineIcon("files",QColor("#289b7c")).pixmap(22,22)); largeHead->addWidget(fileIcon); largeLayout->addLayout(largeHead);
     largeLayout->addStretch(); m_largeSize=label(QStringLiteral("—"),"metricValue"); largeLayout->addWidget(m_largeSize); largeLayout->addWidget(label(dlTr("匹配文件的逻辑大小"),"muted")); m_largeSummary=label(dlTr("等待扫描主目录"),"muted"); largeLayout->addWidget(m_largeSummary); largeLayout->addStretch();
-    auto *largeLink=button(dlTr("查看大文件  →"),{},"link"); largeLink->setStyleSheet("text-align:left;"); connect(largeLink,&QPushButton::clicked,this,[this]{setPage(2);}); largeLayout->addWidget(largeLink); top->addWidget(large,4);
-    layout->addLayout(top,0);
+    auto *largeLink=button(dlTr("查看大文件  →"),{},"link"); largeLink->setStyleSheet("text-align:left;"); connect(largeLink,&QPushButton::clicked,this,[this]{setPage(2);}); largeLayout->addWidget(largeLink);
+    layout->addWidget(new OverviewCards(disk,apps,large));
     auto *middle=new QHBoxLayout; middle->setSpacing(18);
     auto *ranking=card(); auto *rankLayout=new QVBoxLayout(ranking); rankLayout->setContentsMargins(22,20,22,18); rankLayout->setSpacing(9);
     auto *rankHead=new QHBoxLayout; rankHead->addWidget(label(dlTr("软件占用排行"),"cardTitle")); rankHead->addStretch(); auto *rankAll=button(dlTr("全部软件  →"),{},"link"); connect(rankAll,&QPushButton::clicked,this,[this]{setPage(1);}); rankHead->addWidget(rankAll); rankLayout->addLayout(rankHead);
@@ -332,7 +395,8 @@ QWidget *MainWindow::createAppsPage()
     auto *tools=new QHBoxLayout; tools->setSpacing(12); m_search=new QLineEdit; m_search->setPlaceholderText(dlTr("搜索软件名称、包名或描述…")); m_search->addAction(lineIcon("search"),QLineEdit::LeadingPosition); m_search->setClearButtonEnabled(true); tools->addWidget(m_search,1);
     m_appKind=new QComboBox; m_appKind->addItems({dlTr("桌面应用"),dlTr("所有已安装软件包")}); tools->addWidget(m_appKind);
     m_source=new QComboBox; m_source->addItems({dlTr("所有来源"),"DEB","Snap","Flatpak"}); tools->addWidget(m_source); layout->addLayout(tools);
-    connect(m_search,&QLineEdit::textChanged,this,[this](const QString &text){m_appFilter->setSearch(text);updateAppCount();updateAppSelection();});
+    m_search->setObjectName("appsSearch");
+    connectSearch(m_search,this,[this](const QString &text){m_appFilter->setSearch(text);updateAppCount();updateAppSelection();});
     connect(m_appKind,qOverload<int>(&QComboBox::currentIndexChanged),this,[this](int i){m_appFilter->setOnlyDesktop(i==0);updateAppCount();updateAppSelection();});
     connect(m_source,qOverload<int>(&QComboBox::currentIndexChanged),this,[this](int i){m_appFilter->setSourceFilter(i-1);updateAppCount();updateAppSelection();});
     auto *panel=card(); auto *panelLayout=new QVBoxLayout(panel); panelLayout->setContentsMargins(0,0,0,0); panelLayout->setSpacing(0);
@@ -359,7 +423,7 @@ QWidget *MainWindow::createFilesPage()
 {
     auto *page=new QWidget; auto *layout=new QVBoxLayout(page); layout->setContentsMargins(0,0,0,0); layout->setSpacing(14);
     auto *controls=card(); auto *controlsLayout=new QVBoxLayout(controls); controlsLayout->setContentsMargins(18,16,18,16); controlsLayout->setSpacing(12);
-    auto *pathRow=new QHBoxLayout; pathRow->setSpacing(10); m_scanPath=new QLineEdit(QDir::homePath()); m_scanPath->setPlaceholderText(dlTr("输入要扫描的目录")); m_scanPath->addAction(lineIcon("folder"),QLineEdit::LeadingPosition); pathRow->addWidget(m_scanPath,1);
+    auto *pathRow=new QHBoxLayout; pathRow->setSpacing(10); m_scanPath=new QLineEdit(QDir::homePath()); m_scanPath->setPlaceholderText(dlTr("输入要扫描的目录")); connect(m_scanPath,&QLineEdit::returnPressed,this,&MainWindow::startScan); m_scanPath->addAction(lineIcon("folder"),QLineEdit::LeadingPosition); pathRow->addWidget(m_scanPath,1);
     m_browse=button(dlTr("选择目录")); connect(m_browse,&QPushButton::clicked,this,[this]{auto path=QFileDialog::getExistingDirectory(this,dlTr("选择扫描目录"),m_scanPath->text());if(!path.isEmpty())m_scanPath->setText(path);}); pathRow->addWidget(m_browse);
     m_minSize=new QComboBox; m_minSize->addItem(QStringLiteral("≥ 10 MiB"),qulonglong(10ULL*1024*1024)); m_minSize->addItem(QStringLiteral("≥ 100 MiB"),qulonglong(100ULL*1024*1024)); m_minSize->addItem(QStringLiteral("≥ 500 MiB"),qulonglong(500ULL*1024*1024)); m_minSize->addItem(QStringLiteral("≥ 1 GiB"),qulonglong(1024ULL*1024*1024)); m_minSize->setCurrentIndex(1); pathRow->addWidget(m_minSize);
     m_scanButton=button(dlTr("开始扫描"),"search","primary"); connect(m_scanButton,&QPushButton::clicked,this,&MainWindow::startScan); pathRow->addWidget(m_scanButton);
@@ -367,7 +431,7 @@ QWidget *MainWindow::createFilesPage()
     auto *stateRow=new QHBoxLayout; m_scanStatus=label(dlTr("包含隐藏文件，不跟随软链接，不跨挂载点。"),"muted"); m_scanStatus->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred); stateRow->addWidget(m_scanStatus,1); stateRow->addWidget(label(dlTr("只读扫描"),"tag")); controlsLayout->addLayout(stateRow);
     m_scanProgress=new QProgressBar; m_scanProgress->setRange(0,0); m_scanProgress->setTextVisible(false); m_scanProgress->hide(); controlsLayout->addWidget(m_scanProgress); layout->addWidget(controls);
     auto *panel=card(); auto *panelLayout=new QVBoxLayout(panel); panelLayout->setContentsMargins(0,0,0,0); panelLayout->setSpacing(0);
-    auto *tableHeader=new QHBoxLayout; tableHeader->setContentsMargins(18,12,18,12); m_fileCount=label(dlTr("大文件列表"),"cardTitle"); tableHeader->addWidget(m_fileCount); tableHeader->addStretch(); m_fileSearch=new QLineEdit; m_fileSearch->setPlaceholderText(dlTr("筛选文件名或路径…")); m_fileSearch->setClearButtonEnabled(true); m_fileSearch->setMaximumWidth(280); m_fileSearch->addAction(lineIcon("search"),QLineEdit::LeadingPosition); connect(m_fileSearch,&QLineEdit::textChanged,this,[this](const QString &text){m_fileFilter->setFilterFixedString(text);updateFileSelection();}); tableHeader->addWidget(m_fileSearch); panelLayout->addLayout(tableHeader);
+    auto *tableHeader=new QHBoxLayout; tableHeader->setContentsMargins(18,12,18,12); m_fileCount=label(dlTr("大文件列表"),"cardTitle"); tableHeader->addWidget(m_fileCount); tableHeader->addStretch(); m_fileSearch=new QLineEdit; m_fileSearch->setPlaceholderText(dlTr("筛选文件名或路径…")); m_fileSearch->setClearButtonEnabled(true); m_fileSearch->setMaximumWidth(280); m_fileSearch->addAction(lineIcon("search"),QLineEdit::LeadingPosition); m_fileSearch->setObjectName("filesSearch"); connectSearch(m_fileSearch,this,[this](const QString &text){m_fileFilter->setFilterFixedString(text);updateFileSelection();}); tableHeader->addWidget(m_fileSearch); panelLayout->addLayout(tableHeader);
     m_filesTable=new QTableView; m_filesTable->setObjectName("filesTable"); m_filesTable->setModel(m_fileFilter); configureTable(m_filesTable,true); panelLayout->addWidget(m_filesTable,1); layout->addWidget(panel,1);
     connect(m_filesTable->selectionModel(),&QItemSelectionModel::selectionChanged,this,&MainWindow::updateFileSelection);
     connect(m_filesTable,&QTableView::doubleClicked,this,[this]{openSelectedFileDirectory();});
@@ -383,6 +447,7 @@ void MainWindow::setPage(int page)
 {
     m_pages->setCurrentIndex(page);
     for(int i=0;i<m_nav.size();++i)m_nav[i]->setChecked(i==page);
+    if(page>=0 && page<m_nav.size())m_nav[page]->setFocus(Qt::OtherFocusReason);
     m_title->setText(QStringList{dlTr("你的磁盘，一目了然"),dlTr("管理已安装的软件"),dlTr("找到占空间的大文件"),dlTr("清理缓存与日志"),dlTr("逐层看清空间去向"),dlTr("看懂开发环境占用")}.value(page));
     m_subtitle->setText(QStringList{dlTr("了解空间去向，让每一份存储都有迹可循。"),dlTr("查看软件体积与来源，关联用户数据，按需卸载。"),dlTr("从一个目录开始，查看体积最大的文件。"),dlTr("按应用查看缓存占用，勾选后批量清理。"),dlTr("目录分层分析、完整内容校验与只读报告。"),dlTr("识别构建产物、开发缓存与原始数据，先看用途再决定。")}.value(page));
     if(page==3){m_cacheRequested=true;m_cachePage->ensureScanStarted();}
@@ -576,6 +641,7 @@ bool MainWindow::verifyUi(QString *error)
     if(m_appModel->rowCount()==0){*error="no installed packages read";return false;}
     const int before=m_appFilter->rowCount();
     m_search->setText("DISKLENS_NO_SUCH_PACKAGE_09324");
+    QMetaObject::invokeMethod(m_search,"returnPressed",Qt::DirectConnection);
     if(m_appFilter->rowCount()!=0){*error="application search failed";return false;}
     m_search->clear();if(m_appFilter->rowCount()!=before){*error="application filter reset failed";return false;}
     m_appKind->setCurrentIndex(1);if(m_appFilter->rowCount()!=m_appModel->rowCount()){*error="all-package view failed";return false;}m_appKind->setCurrentIndex(0);
@@ -586,6 +652,7 @@ bool MainWindow::verifyUi(QString *error)
     for(int i=1;i<m_fileModel->rowCount();++i)if(m_fileModel->entry(i-1)->bytes<m_fileModel->entry(i)->bytes){*error="file order failed";return false;}
     if(m_fileModel->rowCount()>0){m_filesTable->selectRow(0);updateFileSelection();if(!m_openDirectory->isEnabled()){*error="file action selection failed";return false;}}
     const int fileCount=m_fileFilter->rowCount();m_fileSearch->setText("DISKLENS_NO_SUCH_FILE_09324");
+    QMetaObject::invokeMethod(m_fileSearch,"returnPressed",Qt::DirectConnection);
     if(m_fileFilter->rowCount()!=0){*error="file search failed";return false;}
     m_fileSearch->clear();if(m_fileFilter->rowCount()!=fileCount){*error="file search reset failed";return false;}
     if(!m_scanResult.error.isEmpty()){*error=m_scanResult.error;return false;}

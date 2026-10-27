@@ -429,7 +429,7 @@ void CachePage::createUi()
 
     m_scope = plainLabel({}, "cacheScope");
     m_scope->setWordWrap(true);
-    m_scope->setStyleSheet(QStringLiteral("color:#7b879d;font-size:11px;"));
+    m_scope->setStyleSheet(QStringLiteral("color:#6b7890;font-size:11px;"));
     layout->addWidget(m_scope);
 
     auto *panel = cacheCard();
@@ -464,7 +464,7 @@ void CachePage::createUi()
     selectionRow->addWidget(m_selectVisible);
     selectionRow->addWidget(m_clearSelection);
     m_count = plainLabel({}, "cacheCount");
-    m_count->setStyleSheet(QStringLiteral("color:#8993a7;font-size:12px;"));
+    m_count->setStyleSheet(QStringLiteral("color:#6f7d95;font-size:12px;"));
     selectionRow->addStretch();
     selectionRow->addWidget(m_count);
     panelLayout->addLayout(selectionRow);
@@ -494,7 +494,7 @@ void CachePage::createUi()
     for (int column = 2; column < 6; ++column)
         m_table->horizontalHeader()->setSectionResizeMode(column, QHeaderView::Interactive);
     m_table->setColumnWidth(0, 42);
-    m_table->setColumnWidth(2, 72);
+    m_table->setColumnWidth(2, 96);
     m_table->setColumnWidth(3, 105);
     m_table->setColumnWidth(4, 108);
     m_table->setColumnWidth(5, 116);
@@ -510,7 +510,7 @@ void CachePage::createUi()
     auto *details = new QHBoxLayout;
     details->setContentsMargins(18, 12, 18, 12);
     m_detail = plainLabel(dlTr("点击行或复选框勾选，再次点击取消；空格键也可切换。"), "cacheDetail");
-    m_detail->setStyleSheet(QStringLiteral("color:#8993a7;font-size:11px;"));
+    m_detail->setStyleSheet(QStringLiteral("color:#6f7d95;font-size:11px;"));
     m_detail->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
     details->addWidget(m_detail, 1);
     m_open = cacheButton(dlTr("打开目录"), "cacheOpenDirectory", "folder");
@@ -538,7 +538,7 @@ void CachePage::createUi()
     m_selection = plainLabel({}, "cacheSelectionSummary");
     m_selection->setStyleSheet(QStringLiteral("font-weight:600;color:#42516e;"));
     m_status = plainLabel(dlTr("尚未扫描 · 默认不选择任何目录"), "cacheStatus");
-    m_status->setStyleSheet(QStringLiteral("color:#8993a7;font-size:11px;"));
+    m_status->setStyleSheet(QStringLiteral("color:#6f7d95;font-size:11px;"));
     statusBox->addWidget(m_selection);
     statusBox->addWidget(m_status);
     footer->addLayout(statusBox, 1);
@@ -553,7 +553,7 @@ void CachePage::createUi()
     footer->addWidget(m_clean);
     layout->addLayout(footer);
 
-    connect(m_search, &QLineEdit::textChanged, this, [this](const QString &text) { m_filter->setSearch(text); updateSelection(); });
+    connectSearch(m_search, this, [this](const QString &text) { m_filter->setSearch(text); updateSelection(); });
     connect(m_largeOnly, &QCheckBox::toggled, this, [this](bool on) { m_filter->setLargeOnly(on); updateSelection(); });
     connect(m_logsOnly, &QCheckBox::toggled, this, [this](bool on) { m_filter->setLogsOnly(on); updateSelection(); });
     connect(m_scan, &QPushButton::clicked, this, &CachePage::startScan);

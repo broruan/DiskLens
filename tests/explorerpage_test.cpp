@@ -110,7 +110,7 @@ void ExplorerPageTest::directoryNavigationAndChart()
     QTest::mouseClick(c.up, Qt::LeftButton);
     auto *directory = c.tree->topLevelItem(0); directory->setExpanded(true);
     QCOMPARE(directory->childCount(), 2);
-    c.search->setText(QStringLiteral("copy.bin")); QCOMPARE(c.tree->topLevelItemCount(), 1);
+    c.search->setText(QStringLiteral("copy.bin")); QTRY_COMPARE(c.tree->topLevelItemCount(), 1);
     QCOMPARE(c.tree->topLevelItem(0)->text(0), QStringLiteral("second")); c.search->clear();
     QString error; QVERIFY2(page.verifyUi(&error), qPrintable(error));
     QVERIFY(QFileInfo::exists(temporary.path() + "/largest/unique.bin"));
@@ -136,13 +136,13 @@ void ExplorerPageTest::duplicateScanIsExplicitAndFiltered()
     const QString selected = group->child(0)->text(0); c.duplicates->setCurrentItem(group->child(0));
     auto *copy = page.findChild<QPushButton *>("explorerCopy"); QVERIFY(copy && copy->isEnabled());
     QTest::mouseClick(copy, Qt::LeftButton); QCOMPARE(QApplication::clipboard()->text(), selected);
-    c.search->setText(QStringLiteral("no-match-anywhere")); QCOMPARE(c.duplicates->topLevelItemCount(), 0);
+    c.search->setText(QStringLiteral("no-match-anywhere")); QTRY_COMPARE(c.duplicates->topLevelItemCount(), 0);
     // Export is the complete scan result, independent of the visible search.
     QTemporaryDir reports; QVERIFY(reports.isValid()); QString error;
     QVERIFY2(page.exportReport(reports.path() + "/duplicates.csv", &error), qPrintable(error));
     const QByteArray csv = readFile(reports.path() + "/duplicates.csv");
     QVERIFY(csv.contains("copy.bin")); QVERIFY(csv.contains("logical_redundancy")); QVERIFY(csv.contains("sha256"));
-    c.search->setText(QStringLiteral("copy.bin")); QCOMPARE(c.duplicates->topLevelItemCount(), 1);
+    c.search->setText(QStringLiteral("copy.bin")); QTRY_COMPARE(c.duplicates->topLevelItemCount(), 1);
     // Keep the entire group visible so filtered results do not imply a keeper.
     QCOMPARE(c.duplicates->topLevelItem(0)->childCount(), 2);
     c.search->clear(); c.minimum->setCurrentIndex(2);
