@@ -8,7 +8,7 @@ DiskLens supports English and Simplified Chinese. The English navigation labels 
 
 ### Faster navigation
 
-The current main branch adds these shortcuts:
+Version 1.4 adds these shortcuts:
 
 | Shortcut | Action |
 | --- | --- |
@@ -100,7 +100,7 @@ Allocated-byte totals come from file block counts. They do not guarantee an equa
 
 ### 快捷操作
 
-当前 main 分支新增：`Ctrl+F` 定位并全选当前页搜索词（总览页会打开软件搜索），`Alt+1`–`Alt+6` 按侧栏顺序切页，`F5` 刷新当前视图。大文件页刷新会按当前目录和阈值重新扫描；在目录输入框中按回车也可启动。
+1.4 版本新增：`Ctrl+F` 定位并全选当前页搜索词（总览页会打开软件搜索），`Alt+1`–`Alt+6` 按侧栏顺序切页，`F5` 刷新当前视图。大文件页刷新会按当前目录和阈值重新扫描；在目录输入框中按回车也可启动。
 
 连续输入搜索词后会稍作等待再筛选，按回车立即应用，清空搜索立即恢复。首页卡片随窗口宽度与字号重排；表格和目录树按像素滚动，大字号同时增大表格列宽。缓存选择与清理确认流程保持原有行为。
 

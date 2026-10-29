@@ -23,7 +23,7 @@
 
 DiskLens is a Qt Widgets desktop application written in C++17. It reads your machine's filesystem and package-manager data locally. **Switch between English and Simplified Chinese in the application and adjust the interface font size.** Project documentation is also available in both languages. Screenshots show the real application with example scan data; installed-package information is read from the machine used to capture them.
 
-**Main branch UI preview:** a light workspace, responsive overview cards, clearer tables, debounced search, and keyboard navigation (`Ctrl+F`, `Alt+1`–`Alt+6`, `F5`). Screenshots below show this development version; published v1.3.0 packages retain the earlier interface. See [keyboard workflows](docs/usage.md) and [validation](docs/validation.md).
+**New in 1.4:** a light workspace, responsive overview cards, clearer tables, debounced search, and keyboard navigation (`Ctrl+F`, `Alt+1`–`Alt+6`, `F5`). The screenshots show the interface included in the v1.4.0 packages. See [keyboard workflows](docs/usage.md) and [validation](docs/validation.md).
 
 ## Why DiskLens
 
@@ -61,9 +61,9 @@ The release pipeline targets these **64-bit** Ubuntu combinations, with a separa
 
 | Ubuntu | x86-64 / Intel & AMD (`amd64`) | ARM64 / AArch64 (`arm64`) |
 | --- | --- | --- |
-| 22.04 | `disklens_1.3.0_ubuntu22.04_amd64.deb` | `disklens_1.3.0_ubuntu22.04_arm64.deb` |
-| 24.04 | `disklens_1.3.0_ubuntu24.04_amd64.deb` | `disklens_1.3.0_ubuntu24.04_arm64.deb` |
-| 26.04 | `disklens_1.3.0_ubuntu26.04_amd64.deb` | `disklens_1.3.0_ubuntu26.04_arm64.deb` |
+| 22.04 | `disklens_1.4.0_ubuntu22.04_amd64.deb` | `disklens_1.4.0_ubuntu22.04_arm64.deb` |
+| 24.04 | `disklens_1.4.0_ubuntu24.04_amd64.deb` | `disklens_1.4.0_ubuntu24.04_arm64.deb` |
+| 26.04 | `disklens_1.4.0_ubuntu26.04_amd64.deb` | `disklens_1.4.0_ubuntu26.04_arm64.deb` |
 
 Use the package matching **both** your Ubuntu release and CPU architecture. `x86_64` maps to Debian's `amd64`; `aarch64` maps to `arm64`. 32-bit x86 and ARM packages are not provided. Other distributions are outside the packaged support matrix.
 
@@ -79,7 +79,7 @@ Download the matching package from [Releases](https://github.com/broruan/DiskLen
 
 ```bash
 cd ~/Downloads
-sudo apt install ./disklens_1.3.0_ubuntu24.04_amd64.deb
+sudo apt install ./disklens_1.4.0_ubuntu24.04_amd64.deb
 disklens
 ```
 

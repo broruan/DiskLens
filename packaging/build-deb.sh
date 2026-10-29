@@ -135,7 +135,8 @@ Depends: ${package_depends}, ${svg_dependency}, ${translation_dependency}, pkexe
 Recommends: fonts-noto-cjk
 Description: Local disk usage and installed software explorer
  Qt desktop application for DEB, Snap and Flatpak inventory, protected removal,
- large-file scanning and user cache/log cleanup. The current UI is Chinese.
+ large-file scanning and user cache/log cleanup. English and Simplified Chinese
+ interfaces support adjustable font sizes and keyboard navigation.
  Built natively for Ubuntu ${ubuntu_version} (${VERSION_CODENAME}), ${package_arch}.
 CONTROL
 (

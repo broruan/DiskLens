@@ -1,6 +1,6 @@
 # Changelog / 更新记录
 
-## Unreleased — UI refresh / 界面优化（2026-10-27）
+## 1.4.0 — 2026-10-29
 
 ### English
 

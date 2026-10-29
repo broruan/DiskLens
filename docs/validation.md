@@ -1,5 +1,11 @@
 # Validation scope / 验证范围
 
+## Version 1.4.0 / 版本 1.4.0
+
+On 2026-10-29, a fresh local Ubuntu 22.04 amd64 / Qt 5.15.3 release build passed all 13 CTest targets. The generated `disklens_1.4.0_ubuntu22.04_amd64.deb` passed metadata, ELF architecture, dependencies, desktop/icon assets, checksums and `--version` checks. Its extracted executable passed 14 read-only smoke checks: all seven pages in English and Chinese at 18 px, using disposable scan/cache/state directories. All 540 translation messages and placeholders were verified. Native matrix completion and published download verification must be checked against the [v1.4.0 release](https://github.com/broruan/DiskLens/releases/tag/v1.4.0) and its Actions run; local checks alone do not establish other platforms.
+
+2026-10-29，本机 Ubuntu 22.04 amd64 / Qt 5.15.3 全新发布构建通过 13 个 CTest 目标。生成的 v1.4.0 DEB 通过元数据、ELF 架构、依赖、桌面/图标资源、校验与版本号检查；解包后的程序使用临时目录，通过全部七类页面的中英文 18 px 共 14 组只读检查。540 条翻译及占位符检查通过。其他平台和已发布下载文件的验证须以 [v1.4.0 Release](https://github.com/broruan/DiskLens/releases/tag/v1.4.0) 及其工作流结果为准；下方保留此前界面检查与历史版本记录。
+
 ## Main branch UI refresh — 2026-10-27 / 主分支界面优化
 
 Local validation on Ubuntu 22.04 amd64, GCC 11.3 and Qt 5.15.3:

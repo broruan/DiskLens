@@ -73,11 +73,11 @@ The script builds in a fresh temporary directory, runs tests, creates and valida
 bash packaging/build-deb.sh --qt-major 5 --jobs 2 --output-dir /tmp/disklens-packages
 ```
 
-Names include version, Ubuntu release, and Debian architecture, for example `disklens_1.3.0_ubuntu24.04_arm64.deb`. The script discovers shared-library dependencies with `dpkg-shlibdeps` and adds runtime integrations such as the matching SVG plugin, `pkexec`, and `xdg-utils`. This allows the package metadata to follow each Ubuntu release's actual library names, including `t64` transitions.
+Names include version, Ubuntu release, and Debian architecture, for example `disklens_1.4.0_ubuntu24.04_arm64.deb`. The script discovers shared-library dependencies with `dpkg-shlibdeps` and adds runtime integrations such as the matching SVG plugin, `pkexec`, and `xdg-utils`. This allows the package metadata to follow each Ubuntu release's actual library names, including `t64` transitions.
 
 ### Release automation
 
-[`.github/workflows/build.yml`](../.github/workflows/build.yml) defines native Ubuntu 22.04 / 24.04 / 26.04 jobs for `amd64` and `arm64`. A version tag such as `v1.3.0` triggers the release workflow. All matrix jobs must succeed before the release job gathers six packages and publishes them with `SHA256SUMS`. Check the workflow attached to the tag before stating that a platform passed.
+[`.github/workflows/build.yml`](../.github/workflows/build.yml) defines native Ubuntu 22.04 / 24.04 / 26.04 jobs for `amd64` and `arm64`. A version tag such as `v1.4.0` triggers the release workflow. All matrix jobs must succeed before the release job gathers six packages and publishes them with `SHA256SUMS`. Check the workflow attached to the tag before stating that a platform passed.
 
 ## 简体中文
 
@@ -130,8 +130,8 @@ bash packaging/build-deb.sh --qt-major 5 --jobs 2
 
 脚本在全新临时目录构建、运行测试、生成并检查安装包，默认输出至 `dist/`，不会安装软件。通过 `--output-dir /tmp/disklens-packages` 可指定其他目录。
 
-包名包含版本、Ubuntu 版本与 Debian 架构，例如 `disklens_1.3.0_ubuntu24.04_arm64.deb`。依赖通过 `dpkg-shlibdeps` 根据实际链接库生成，并补充对应 SVG 插件、`pkexec` 与 `xdg-utils`，可跟随不同 Ubuntu 版本的库命名及 `t64` 变化。
+包名包含版本、Ubuntu 版本与 Debian 架构，例如 `disklens_1.4.0_ubuntu24.04_arm64.deb`。依赖通过 `dpkg-shlibdeps` 根据实际链接库生成，并补充对应 SVG 插件、`pkexec` 与 `xdg-utils`，可跟随不同 Ubuntu 版本的库命名及 `t64` 变化。
 
 ### 发布流水线
 
-[`.github/workflows/build.yml`](../.github/workflows/build.yml) 定义 Ubuntu 22.04 / 24.04 / 26.04 的 `amd64`、`arm64` 原生构建任务。推送 `v1.3.0` 形式的版本标签后触发发布；全部矩阵任务成功后，发布任务汇总六个安装包并附带 `SHA256SUMS`。只有对应标签的实际工作流结果才能证明某个平台已经通过。
+[`.github/workflows/build.yml`](../.github/workflows/build.yml) 定义 Ubuntu 22.04 / 24.04 / 26.04 的 `amd64`、`arm64` 原生构建任务。推送 `v1.4.0` 形式的版本标签后触发发布；全部矩阵任务成功后，发布任务汇总六个安装包并附带 `SHA256SUMS`。只有对应标签的实际工作流结果才能证明某个平台已经通过。

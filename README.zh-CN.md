@@ -23,7 +23,7 @@
 
 磁盘透镜是一款使用 **Qt Widgets 与 C++17** 编写的桌面磁盘空间管理应用，直接读取本机文件系统和软件包信息。**应用内可切换简体中文与 English，并调整界面字体大小**；项目文档也提供独立的中英双语版本。截图来自真实程序，扫描目录使用示例数据，已安装软件信息来自截图环境的实际读取。
 
-**main 分支界面预览：** 浅色工作区、自适应首页卡片、更清晰的表格、搜索输入合并处理，以及 `Ctrl+F`、`Alt+1`–`Alt+6`、`F5` 快捷操作。本文截图来自当前开发版；已发布的 v1.3.0 安装包仍采用此前界面。详见[使用说明](docs/usage.md)与[验证记录](docs/validation.md)。
+**1.4 新版界面：** 浅色工作区、自适应首页卡片、更清晰的表格、搜索输入合并处理，以及 `Ctrl+F`、`Alt+1`–`Alt+6`、`F5` 快捷操作。本文截图所示界面已包含在 v1.4.0 安装包中。详见[使用说明](docs/usage.md)与[验证记录](docs/validation.md)。
 
 ## 为什么选择磁盘透镜
 
@@ -61,9 +61,9 @@
 
 | Ubuntu | x86-64 / Intel 与 AMD（`amd64`） | ARM64 / AArch64（`arm64`） |
 | --- | --- | --- |
-| 22.04 | `disklens_1.3.0_ubuntu22.04_amd64.deb` | `disklens_1.3.0_ubuntu22.04_arm64.deb` |
-| 24.04 | `disklens_1.3.0_ubuntu24.04_amd64.deb` | `disklens_1.3.0_ubuntu24.04_arm64.deb` |
-| 26.04 | `disklens_1.3.0_ubuntu26.04_amd64.deb` | `disklens_1.3.0_ubuntu26.04_arm64.deb` |
+| 22.04 | `disklens_1.4.0_ubuntu22.04_amd64.deb` | `disklens_1.4.0_ubuntu22.04_arm64.deb` |
+| 24.04 | `disklens_1.4.0_ubuntu24.04_amd64.deb` | `disklens_1.4.0_ubuntu24.04_arm64.deb` |
+| 26.04 | `disklens_1.4.0_ubuntu26.04_amd64.deb` | `disklens_1.4.0_ubuntu26.04_arm64.deb` |
 
 请同时匹配 **Ubuntu 版本与 CPU 架构**。`x86_64` 在 Debian 包中称为 `amd64`，`aarch64` 对应 `arm64`。不提供 32 位 x86 / ARM 安装包，其他 Linux 发行版不在预编译包支持矩阵内。
 
@@ -79,7 +79,7 @@ dpkg --print-architecture
 
 ```bash
 cd ~/Downloads
-sudo apt install ./disklens_1.3.0_ubuntu24.04_amd64.deb
+sudo apt install ./disklens_1.4.0_ubuntu24.04_amd64.deb
 disklens
 ```
 
