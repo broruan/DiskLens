@@ -23,7 +23,7 @@
 
 DiskLens is a Qt Widgets desktop application written in C++17. It reads your machine's filesystem and package-manager data locally. **Switch between English and Simplified Chinese in the application and adjust the interface font size.** Project documentation is also available in both languages. Screenshots show the real application with example scan data; installed-package information is read from the machine used to capture them.
 
-**New in 1.5:** Space explorer combines directory names, allocated-space bars, sizes and percentages in one expandable tree. Open a folder to compare its children without switching between a hierarchy and a separate chart. Percentages use the immediate parent and remain stable under search; incomplete measurements keep their status. The light workspace and keyboard navigation (`Ctrl+F`, `Alt+1`–`Alt+6`, `F5`) introduced in 1.4 remain available. See [analysis tools](docs/analysis-tools.md) and [validation](docs/validation.md).
+**New in 1.5:** Space explorer combines directory names, allocated-space bars, sizes and percentages in one expandable tree. Open a folder to compare its children without switching between a hierarchy and a separate chart. Percentages use the immediate parent and remain stable under search; incomplete measurements keep their status. Version 1.5.1 distributes tree columns across the available width while keeping them manually resizable. The light workspace and keyboard navigation (`Ctrl+F`, `Alt+1`–`Alt+6`, `F5`) introduced in 1.4 remain available. See [analysis tools](docs/analysis-tools.md) and [validation](docs/validation.md).
 
 ## Why DiskLens
 
@@ -61,9 +61,9 @@ The release pipeline targets these **64-bit** Ubuntu combinations, with a separa
 
 | Ubuntu | x86-64 / Intel & AMD (`amd64`) | ARM64 / AArch64 (`arm64`) |
 | --- | --- | --- |
-| 22.04 | `disklens_1.5.0_ubuntu22.04_amd64.deb` | `disklens_1.5.0_ubuntu22.04_arm64.deb` |
-| 24.04 | `disklens_1.5.0_ubuntu24.04_amd64.deb` | `disklens_1.5.0_ubuntu24.04_arm64.deb` |
-| 26.04 | `disklens_1.5.0_ubuntu26.04_amd64.deb` | `disklens_1.5.0_ubuntu26.04_arm64.deb` |
+| 22.04 | `disklens_1.5.1_ubuntu22.04_amd64.deb` | `disklens_1.5.1_ubuntu22.04_arm64.deb` |
+| 24.04 | `disklens_1.5.1_ubuntu24.04_amd64.deb` | `disklens_1.5.1_ubuntu24.04_arm64.deb` |
+| 26.04 | `disklens_1.5.1_ubuntu26.04_amd64.deb` | `disklens_1.5.1_ubuntu26.04_arm64.deb` |
 
 Use the package matching **both** your Ubuntu release and CPU architecture. `x86_64` maps to Debian's `amd64`; `aarch64` maps to `arm64`. 32-bit x86 and ARM packages are not provided. Other distributions are outside the packaged support matrix.
 
@@ -79,7 +79,7 @@ Download the matching package from [Releases](https://github.com/broruan/DiskLen
 
 ```bash
 cd ~/Downloads
-sudo apt install ./disklens_1.5.0_ubuntu24.04_amd64.deb
+sudo apt install ./disklens_1.5.1_ubuntu24.04_amd64.deb
 disklens
 ```
 

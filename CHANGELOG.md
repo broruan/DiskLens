@@ -1,6 +1,22 @@
 # Changelog / 更新记录
 
-## 1.5.0 — 2026-10-30
+## 1.5.1 — 2026-10-30
+
+### English
+
+- Carry forward the integrated directory hierarchy and allocated-space bars, with parent-relative percentages on expanded child rows.
+- Distribute tree columns across the available width to avoid an unused strip in wider windows; retain manual column resizing.
+- Distinguish continuous bar fills from blue text-antialiasing fringes in large-font rendering checks across Qt versions.
+- Follow the unpublished v1.5.0 tag: its release workflow stopped at a large-font raster assertion on Ubuntu 24.04/26.04 and did not publish a GitHub Release or release download assets.
+
+### 简体中文
+
+- 延续目录层级与实际占用进度条合并的功能，在展开后的子项行中显示大小与父目录占比。
+- 目录树各列随可用宽度分配，避免宽窗口出现空白区域，并保留手动调宽。
+- 大字号渲染检查通过连续填充识别占用条，避免将不同 Qt 版本的文字抗锯齿蓝边误判为占用条。
+- 承接未发布的 v1.5.0 标签：其发布流水线在 Ubuntu 24.04/26.04 的大字号像素断言处停止，没有发布 GitHub Release 或下载附件。
+
+## 1.5.0 — 2026-10-30 (unpublished / 未发布)
 
 ### English
 

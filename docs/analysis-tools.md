@@ -1,8 +1,8 @@
 # 空间分析与开发环境指南 / Analysis tools guide
 
-适用于 DiskLens 1.5.0。「空间分析」「开发环境」和「软件空间画像」均为只读分析：可以查看、打开目录和复制路径；空间分析与开发环境还支持导出报告。这些页面不提供删除按钮，也不会执行构建、卸载或缓存清理命令。
+适用于 DiskLens 1.5.1。「空间分析」「开发环境」和「软件空间画像」均为只读分析：可以查看、打开目录和复制路径；空间分析与开发环境还支持导出报告。这些页面不提供删除按钮，也不会执行构建、卸载或缓存清理命令。
 
-For DiskLens 1.5.0. **Space Analysis**, **Developer Environment**, and **Application Storage Profile** are read-only tools. They inspect storage, open directories, and copy paths. Space Analysis and Developer Environment also export reports. These pages do not delete files or run build, uninstall, or cache-cleaning commands.
+For DiskLens 1.5.1. **Space Analysis**, **Developer Environment**, and **Application Storage Profile** are read-only tools. They inspect storage, open directories, and copy paths. Space Analysis and Developer Environment also export reports. These pages do not delete files or run build, uninstall, or cache-cleaning commands.
 
 ## 1. 从目录开始 / Start with a directory
 

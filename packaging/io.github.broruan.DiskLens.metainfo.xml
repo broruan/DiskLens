@@ -25,10 +25,10 @@
   <content_rating type="oars-1.1"/>
   <languages><lang percentage="100">en</lang><lang percentage="100">zh_CN</lang></languages>
   <releases>
-    <release version="1.5.0" date="2026-10-30">
+    <release version="1.5.1" date="2026-10-30">
       <description>
-        <p>Combine directory hierarchy and allocated-space bars in one expandable view, with per-parent percentages and explicit incomplete measurements.</p>
-        <p xml:lang="zh-CN">将目录层级与实际占用进度条合并，在展开各层目录时直接查看大小与父目录占比，并明确标注不完整统计。</p>
+        <p>Combine directory hierarchy and allocated-space bars in one expandable view, with per-parent percentages, explicit incomplete measurements and responsive, manually resizable columns.</p>
+        <p xml:lang="zh-CN">将目录层级与实际占用进度条合并，在展开各层目录时直接查看大小与父目录占比，明确标注不完整统计，并按可用宽度分配各列、保留手动调宽。</p>
       </description>
     </release>
     <release version="1.4.1" date="2026-10-30">

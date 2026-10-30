@@ -86,6 +86,7 @@ class ExplorerPageTest : public QObject {
 private slots:
     void directoryNavigationAndInlineBars();
     void expandedRowsUseParentAllocationAndSurviveFiltering();
+    void columnsFillWideWindowsAndRemainResizable();
     void duplicateScanIsExplicitAndFiltered();
     void reportEscapingAndPartialResults();
     void cancelAndWorkerLifetime();
@@ -174,6 +175,35 @@ void ExplorerPageTest::expandedRowsUseParentAllocationAndSurviveFiltering()
     QVERIFY(folderShare < 1.0);
     folder->setExpanded(true); QCOMPARE(folder->childCount(), 1);
     QCOMPARE(folder->child(0)->data(1, Qt::UserRole + 3).toDouble(), payloadShare);
+}
+
+void ExplorerPageTest::columnsFillWideWindowsAndRemainResizable()
+{
+    QTemporaryDir temporary; QVERIFY(temporary.isValid()); QVERIFY(fixture(temporary.path()));
+    ExplorerPage page; page.setRoot(temporary.path()); page.resize(1800, 760); page.show(); page.ensureScanStarted();
+    QTRY_VERIFY_WITH_TIMEOUT(page.isSettled(), 10000);
+    auto *tree = controls(page).tree; QVERIFY(tree);
+    const auto occupied = [tree] {
+        int total = 0;
+        for (int column = 0; column < 4; ++column) total += tree->columnWidth(column);
+        return total;
+    };
+    QTRY_VERIFY(qAbs(occupied() - tree->viewport()->width()) <= 2);
+    const int wideBar = tree->columnWidth(1);
+    QVERIFY(wideBar > 400);
+    page.resize(1000, 760);
+    QTRY_VERIFY(tree->columnWidth(1) < wideBar);
+    QTRY_VERIFY(qAbs(occupied() - tree->viewport()->width()) <= 2);
+    page.resize(800, 760);
+    QTRY_VERIFY(qAbs(occupied() - tree->viewport()->width()) <= 2);
+    page.hide(); page.resize(1400, 760); QCoreApplication::processEvents(); page.show();
+    QTRY_VERIFY(qAbs(occupied() - tree->viewport()->width()) <= 2);
+    page.resize(1800, 760);
+    QTRY_VERIFY(tree->columnWidth(1) >= wideBar - 2);
+    tree->setColumnWidth(0, 1200); // The same section resize signal as a header drag.
+    page.resize(2200, 760);
+    QTRY_VERIFY(occupied() >= tree->viewport()->width());
+    QCOMPARE(tree->columnWidth(0), 1200);
 }
 
 void ExplorerPageTest::parentScopeClearsFilterAndShowsAllSiblings()

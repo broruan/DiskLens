@@ -29,6 +29,7 @@
 #include <QTabWidget>
 #include <QTabBar>
 #include <QTemporaryFile>
+#include <QTimer>
 #include <QTreeWidget>
 #include <QUrl>
 #include <QVBoxLayout>
@@ -47,6 +48,80 @@ constexpr int populatedRole = Qt::UserRole + 2;
 constexpr int allocationShareRole = Qt::UserRole + 3;
 constexpr int allocatedBytesRole = Qt::UserRole + 4;
 constexpr int parentAllocatedBytesRole = Qt::UserRole + 5;
+
+class DirectoryTree final : public QTreeWidget {
+public:
+    DirectoryTree()
+    {
+        viewport()->installEventFilter(this);
+        connect(header(), &QHeaderView::sectionResized, this, [this] {
+            if (m_hasFitted && !m_adjusting && isVisible()) m_manuallySized = true;
+        });
+    }
+
+protected:
+    void showEvent(QShowEvent *event) override
+    {
+        QTreeWidget::showEvent(event);
+        fitColumns();
+    }
+
+    bool eventFilter(QObject *object, QEvent *event) override
+    {
+        if (object == viewport() && event->type() == QEvent::Resize && !m_pending) {
+            m_pending = true;
+            QTimer::singleShot(0, this, [this] { m_pending = false; fitColumns(); });
+        }
+        return QTreeWidget::eventFilter(object, event);
+    }
+
+private:
+    void fitColumns()
+    {
+        if (columnCount() != 4 || !isVisible()) return;
+        m_adjusting = true;
+        const int available = viewport()->width();
+        if (m_manuallySized) {
+            int occupied = 0;
+            for (int column = 0; column < 4; ++column) occupied += columnWidth(column);
+            // Retain manually widened hierarchy columns and horizontal scroll;
+            // give any unused room to the allocation bars.
+            if (occupied < available) setColumnWidth(1, columnWidth(1) + available - occupied);
+        } else {
+            const int minimum[] = {
+                qMax(260, fontMetrics().horizontalAdvance(QStringLiteral("directory-name-012345")) + 60),
+                qMax(220, fontMetrics().horizontalAdvance(QStringLiteral("999.9 GiB · 100.0%")) + 24),
+                qMax(130, header()->fontMetrics().horizontalAdvance(headerItem()->text(2)) + 24),
+                qMax(80, header()->fontMetrics().horizontalAdvance(headerItem()->text(3)) + 24)};
+            const double shares[] = {0.30, 0.46, 0.16, 0.08};
+            int widths[4], occupied = 0, minimumTotal = 0;
+            for (int column = 0; column < 4; ++column) {
+                widths[column] = qMax(minimum[column], int(available * shares[column]));
+                occupied += widths[column];
+                minimumTotal += minimum[column];
+            }
+            if (available < minimumTotal) {
+                for (int column = 0; column < 4; ++column) widths[column] = minimum[column];
+            } else if (occupied > available) {
+                // A clamped name/count column must not force scrolling when
+                // the other columns still have room above their minima.
+                int excess = occupied - available;
+                for (int column : {1, 0, 2, 3}) {
+                    const int reduction = qMin(excess, widths[column] - minimum[column]);
+                    widths[column] -= reduction; excess -= reduction;
+                }
+            } else if (occupied < available) widths[1] += available - occupied;
+            for (int column = 0; column < 4; ++column) setColumnWidth(column, widths[column]);
+        }
+        m_adjusting = false;
+        m_hasFitted = true;
+    }
+
+    bool m_adjusting = false;
+    bool m_manuallySized = false;
+    bool m_pending = false;
+    bool m_hasFitted = false;
+};
 
 // Paint in the view rather than creating a widget for each scanned entry. The
 // tree still owns selection, accessibility, scrolling and lazy child expansion.
@@ -361,16 +436,13 @@ void ExplorerPage::createUi()
     navigation->addWidget(m_up); navigation->addWidget(m_home); navigation->addWidget(m_breadcrumb, 1);
     directoryLayout->addLayout(navigation);
     m_metrics = label(dlTr("尚未扫描"), "explorerMetrics"); m_metrics->setWordWrap(true); directoryLayout->addWidget(m_metrics);
-    m_tree = new QTreeWidget; m_tree->setObjectName(QStringLiteral("explorerTree"));
+    m_tree = new DirectoryTree; m_tree->setObjectName(QStringLiteral("explorerTree"));
     m_tree->setHeaderLabels({dlTr("名称 / 目录层级"), dlTr("实际占用"), dlTr("逻辑大小"), dlTr("文件数")});
     styleTree(m_tree);
-    // Keep the hierarchy resizable: deep indentation may need a wider name
-    // column than the viewport can provide, using horizontal scrolling.
+    // Responsive widths fill the workspace; every column stays resizable for
+    // deep hierarchy names or unusually long totals.
     m_tree->header()->setStretchLastSection(false);
     m_tree->header()->setSectionResizeMode(QHeaderView::Interactive);
-    m_tree->setColumnWidth(0, 420);
-    m_tree->setColumnWidth(1, 260);
-    m_tree->setColumnWidth(2, 150); m_tree->setColumnWidth(3, 100);
     m_tree->setItemDelegateForColumn(1, new AllocationDelegate(m_tree));
     m_tree->setAccessibleName(dlTr("目录层级与实际占用"));
     m_tree->setToolTip(dlTr("展开目录即可比较各级实际占用；占用条表示项目占父目录的比例，搜索不改变比例。双击目录可进入；未完成统计的项目不显示精确比例。"));

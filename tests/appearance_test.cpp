@@ -374,13 +374,22 @@ void AppearanceTest::explorerLargeFontLayout()
         const QImage cell=tree->viewport()->grab(bounds).toImage();
         QVERIFY(tree->columnWidth(1)>=tree->fontMetrics().horizontalAdvance(item->text(1))+20);
         int ink=0,blue=0,inkBottom=-1,blueTop=cell.height();
-        for(int y=0;y<cell.height();++y) for(int x=0;x<cell.width();++x) {
-            const QColor pixel=cell.pixelColor(x,y);
-            if(pixel.red()<100 && pixel.green()<125 && pixel.blue()<170) { ++ink; inkBottom=qMax(inkBottom,y); }
-            if(pixel.blue()>pixel.red()+50 && pixel.blue()>pixel.green()+30) { ++blue; blueTop=qMin(blueTop,y); }
+        for(int y=0;y<cell.height();++y) {
+            int blueRun=0;
+            for(int x=0;x<cell.width();++x) {
+                const QColor pixel=cell.pixelColor(x,y);
+                if(pixel.red()<100 && pixel.green()<125 && pixel.blue()<170) { ++ink; inkBottom=qMax(inkBottom,y); }
+                if(pixel.blue()>pixel.red()+50 && pixel.blue()>pixel.green()+30) {
+                    ++blue; ++blueRun;
+                    // Newer Qt/fontconfig can give text blue subpixel fringes.
+                    // A bar has a continuous fill; isolated glyph pixels do not.
+                    if(blueRun>=6) blueTop=qMin(blueTop,y);
+                } else blueRun=0;
+            }
         }
         QVERIFY(ink>30);
         QVERIFY(blue>10);
+        QVERIFY(blueTop<cell.height());
         QVERIFY2(inkBottom<blueTop,"Large-font allocation text must fit above the inline bar.");
     }
     tree->setCurrentItem(tree->topLevelItem(0));

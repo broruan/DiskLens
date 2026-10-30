@@ -1,14 +1,24 @@
 # Validation scope / 验证范围
 
-## Version 1.5.0 / 版本 1.5.0
+## Version 1.5.1 / 版本 1.5.1
+
+On 2026-10-30, the final responsive layout passed all 13 CTest targets and 28 production read-only smoke checks (seven pages × English/Chinese × 13/18 px). Width checks cover 800–2200 px windows, shrink/grow cycles, hidden-page resizing and manually widened hierarchy columns. The allocation bars use the remaining horizontal room instead of leaving an empty area to the right. Chinese 13 px and English/Chinese 18 px production screenshots were reviewed.
+
+The Ubuntu 24.04 / Qt 5.15.13 isolated regression loop first reproduced the exact v1.5.0 CI failure. Glyph antialiasing produced isolated blue pixels at y14, while actual text ended at y27 and the bar began at y40. Detecting a continuous horizontal fill preserves the overlap check and eliminates that false positive. The fixed check passed on both Qt 5.15.3 and 5.15.13. A fresh Ubuntu 22.04 amd64 DEB passed all tests plus metadata, ELF, dependencies, desktop/icon assets, checksums and version validation. All 546 translations and placeholders passed. These automated/offscreen checks do not establish physical desktop or GPU behavior.
+
+2026-10-30，最终自适应布局通过全部 13 个 CTest 目标，以及七类页面 × 中英文 × 13/18 px 共 28 组正式程序只读检查。列宽检查覆盖 800–2200 px 窗口、缩小后再放大、隐藏页面调整尺寸，以及手动加宽目录名称列；占用条利用剩余横向空间，避免右侧出现空白区域。已核对中文 13 px 和中英文 18 px 的正式界面截图。
+
+隔离 Ubuntu 24.04 / Qt 5.15.13 环境首先复现了 v1.5.0 CI 的同一失败：文字抗锯齿在 y14 产生零散蓝色像素，实际文字止于 y27，占用条从 y40 开始。改为识别连续横向填充后，保留重叠检查并消除误判；修正后的检查在 Qt 5.15.3 与 5.15.13 均通过。全新 Ubuntu 22.04 amd64 DEB 通过全部测试，以及元数据、ELF、依赖、桌面/图标资源、校验与版本检查；546 条翻译及占位符检查通过。上述自动化及离屏检查不代表实体桌面或 GPU 行为。
+
+## Version 1.5.0 — unpublished / 版本 1.5.0 — 未发布
 
 On 2026-10-30, a fresh Ubuntu 22.04 amd64 / Qt 5.15.3 release build passed all 13 CTest targets. The merged-tree regressions cover expanded child allocation bars, immediate-parent denominators, unchanged ratios under search, entries beyond the former eight-row chart limit, partial/pending/excluded states, selected text contrast and large-font text/bar separation. The generated `disklens_1.5.0_ubuntu22.04_amd64.deb` passed metadata, ELF, dependencies, desktop/icon assets, checksums and `--version` verification.
 
-The final production executable passed 28 read-only smoke checks: all seven pages × English/Chinese × 13/18 px, with disposable scan/cache/state/config directories. Expanded-directory screenshots were reviewed in Chinese at 13 px and English/Chinese at 18 px; the README Space Analysis screenshot was refreshed. All 546 translations and placeholders passed validation. These are automated/offscreen checks and do not establish physical desktop or GPU behavior. Remote release results are recorded only after the exact tag's workflow completes.
+The final production executable passed 28 read-only smoke checks: all seven pages × English/Chinese × 13/18 px, with disposable scan/cache/state/config directories. Expanded-directory screenshots were reviewed in Chinese at 13 px and English/Chinese at 18 px; the README Space Analysis screenshot was refreshed. All 546 translations and placeholders passed validation. These are automated/offscreen checks and do not establish physical desktop or GPU behavior. The [v1.5.0 tag workflow](https://github.com/broruan/DiskLens/actions/runs/40982830761) stopped at a large-font raster assertion on Ubuntu 24.04/26.04; no Release was published. An isolated Ubuntu 24.04 / Qt 5.15.13 reproduction showed blue text-antialiasing fringes mistaken for the bar, while the text and bar had a clear gap.
 
 2026-10-30，Ubuntu 22.04 amd64 / Qt 5.15.3 全新发布构建通过全部 13 个 CTest 目标。合并目录树的回归检查覆盖展开后的子项占用条、直属父目录分母、搜索后占比保持不变、超过原图表前八项的条目、不完整/待统计/排除项状态、选中行文字对比度及大字号文字与占用条分离。生成的 `disklens_1.5.0_ubuntu22.04_amd64.deb` 通过元数据、ELF、依赖、桌面/图标资源、校验及版本检查。
 
-最终正式程序使用临时扫描、缓存、状态与配置目录，通过七类页面 × 中英文 × 13/18 px 共 28 组只读界面检查。已核对中文 13 px 及中英文 18 px 的展开目录截图，并更新 README 空间分析截图；546 条翻译与占位符检查通过。上述自动化和离屏结果不代表实体桌面或 GPU 行为；远程发布结果仅在对应标签的工作流完成后记录。
+最终正式程序使用临时扫描、缓存、状态与配置目录，通过七类页面 × 中英文 × 13/18 px 共 28 组只读界面检查。已核对中文 13 px 及中英文 18 px 的展开目录截图，并更新 README 空间分析截图；546 条翻译与占位符检查通过。上述自动化和离屏结果不代表实体桌面或 GPU 行为；[v1.5.0 标签构建](https://github.com/broruan/DiskLens/actions/runs/40982830761) 在 Ubuntu 24.04/26.04 的大字号像素断言处停止，未发布 Release。隔离 Ubuntu 24.04 / Qt 5.15.13 环境复现确认：文字与条形间距清楚，失败来自测试将文字抗锯齿蓝边误识别为占用条。
 
 ## Version 1.4.1 / 版本 1.4.1
 
