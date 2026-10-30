@@ -10,6 +10,10 @@ The Ubuntu 24.04 / Qt 5.15.13 isolated regression loop first reproduced the exac
 
 隔离 Ubuntu 24.04 / Qt 5.15.13 环境首先复现了 v1.5.0 CI 的同一失败：文字抗锯齿在 y14 产生零散蓝色像素，实际文字止于 y27，占用条从 y40 开始。改为识别连续横向填充后，保留重叠检查并消除误判；修正后的检查在 Qt 5.15.3 与 5.15.13 均通过。全新 Ubuntu 22.04 amd64 DEB 通过全部测试，以及元数据、ELF、依赖、桌面/图标资源、校验与版本检查；546 条翻译及占位符检查通过。上述自动化及离屏检查不代表实体桌面或 GPU 行为。
 
+[Release CI #18](https://github.com/broruan/DiskLens/actions/runs/41018722187), tag `v1.5.1`, commit `8c881da`, completed successfully in 2m 31s. All six native Ubuntu 22.04 / 24.04 / 26.04 × amd64 / arm64 jobs and publication passed. All six public [v1.5.1 DEBs](https://github.com/broruan/DiskLens/releases/tag/v1.5.1) were downloaded again and verified against SHA256SUMS, version 1.5.1 and their architecture metadata; the latest-release entry resolves to v1.5.1.
+
+[发布 CI #18](https://github.com/broruan/DiskLens/actions/runs/41018722187) 对应 `v1.5.1` 标签、`8c881da` 提交，用时 2 分 31 秒，Ubuntu 22.04 / 24.04 / 26.04 × amd64 / arm64 六个原生任务和发布任务全部通过。已重新下载全部六个公开 [v1.5.1 DEB](https://github.com/broruan/DiskLens/releases/tag/v1.5.1)，逐一验证 SHA256SUMS、1.5.1 版本号与架构；最新版本入口已指向 v1.5.1。
+
 ## Version 1.5.0 — unpublished / 版本 1.5.0 — 未发布
 
 On 2026-10-30, a fresh Ubuntu 22.04 amd64 / Qt 5.15.3 release build passed all 13 CTest targets. The merged-tree regressions cover expanded child allocation bars, immediate-parent denominators, unchanged ratios under search, entries beyond the former eight-row chart limit, partial/pending/excluded states, selected text contrast and large-font text/bar separation. The generated `disklens_1.5.0_ubuntu22.04_amd64.deb` passed metadata, ELF, dependencies, desktop/icon assets, checksums and `--version` verification.
