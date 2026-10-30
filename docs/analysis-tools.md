@@ -1,24 +1,24 @@
 # 空间分析与开发环境指南 / Analysis tools guide
 
-适用于 DiskLens 1.4.1。「空间分析」「开发环境」和「软件空间画像」均为只读分析：可以查看、打开目录和复制路径；空间分析与开发环境还支持导出报告。这些页面不提供删除按钮，也不会执行构建、卸载或缓存清理命令。
+适用于 DiskLens 1.5.0。「空间分析」「开发环境」和「软件空间画像」均为只读分析：可以查看、打开目录和复制路径；空间分析与开发环境还支持导出报告。这些页面不提供删除按钮，也不会执行构建、卸载或缓存清理命令。
 
-For DiskLens 1.4.1. **Space Analysis**, **Developer Environment**, and **Application Storage Profile** are read-only tools. They inspect storage, open directories, and copy paths. Space Analysis and Developer Environment also export reports. These pages do not delete files or run build, uninstall, or cache-cleaning commands.
+For DiskLens 1.5.0. **Space Analysis**, **Developer Environment**, and **Application Storage Profile** are read-only tools. They inspect storage, open directories, and copy paths. Space Analysis and Developer Environment also export reports. These pages do not delete files or run build, uninstall, or cache-cleaning commands.
 
 ## 1. 从目录开始 / Start with a directory
 
 1. 打开「空间分析」，默认分析主目录；也可点击「主目录」回到主目录，或选择其他真实目录。进入页面会启动目录元数据统计；修改路径后点击「重新扫描」。
-2. 查看「目录空间分析」页的实际占用、逻辑大小和文件数。双击目录行，或点击右侧比例图中的目录行，即可进入下一层；用上一级或根目录按钮返回；上一级也可越过当前扫描根，重新分析父目录。切换扫描范围时会清空搜索，避免旧筛选隐藏新目录的内容。
-3. 使用搜索定位名称或路径。比例图显示当前层匹配的前 8 项，左侧列表保留其余匹配项；细小条目也能点击整行进入。
+2. 在统一目录树中查看名称、实际占用进度条、逻辑大小和文件数。点击展开箭头即可查看子目录层级及每一行的占用，不再需要切换到独立比例图，也没有前 8 项的图表显示限制。
+3. 双击目录行进入该目录；用上一级或根目录按钮返回。上一级也可越过当前扫描根，重新分析父目录；切换扫描范围时会清空搜索，避免旧筛选隐藏新目录的内容。搜索可匹配名称或路径。
 4. 选中条目后复制完整路径，或打开其所在目录；需要保存结果时导出当前页的 CSV。
 
 1. Open **Space Analysis** to inspect your home folder. Use **Home folder** to return there, or choose another real directory. Opening the page starts a metadata scan; after editing the path, select **Rescan**.
-2. Inspect allocated bytes, logical bytes, and file counts. Double-click a directory row, or activate its row in the chart, to move down a level. Use the parent/root controls to return. Parent can also move beyond the scan root and analyze its parent. Changing scope clears the previous search filter.
-3. Search names or paths. The chart shows the largest eight matching children of the current directory; the table retains the remaining matches. The entire chart row is clickable, including tiny entries.
+2. Inspect names, allocated-space bars, logical bytes and file counts in the unified tree. Expand a directory to see its children and their usage on the same rows. There is no separate chart or eight-entry chart limit.
+3. Double-click a directory row to enter it; use the parent/root controls to return. Parent can also move beyond the scan root and analyze its parent. Changing scope clears the previous search filter. Search matches names or paths.
 4. Select an entry to copy its full path or open its directory. Export the active tab to CSV when a saved snapshot is useful.
 
-比例图的分母始终是**当前目录的实际占用总量**，不会将搜索后的剩余项目重新归一化为 100%。它只展示当前层前 8 项，目录自身元数据也占空间，因此可见条目的比例之和不一定等于 100%。图表支持方向键选择、Enter / Space 激活。
+每行进度条与百分比的分母为该条目**直属父目录的实际占用总量**；顶层行以当前浏览目录为父目录，展开后的子项以展开的目录为父目录。搜索不会将剩余匹配项重新归一化为 100%。目录自身元数据也占空间，因此可见子项的比例之和不一定等于 100%。只有条目与父目录均完整统计时才显示精确占比；待统计、部分统计及排除项保留对应状态，不能按零占用理解。
 
-The chart denominator is always the **current directory's total allocated bytes**. Search results are not renormalized to 100%. Only eight children are charted, and directory metadata also occupies blocks, so visible percentages need not sum to 100%. Arrow keys select chart rows; Enter or Space activates them.
+Each row's bar and percentage use its **immediate parent's total allocated bytes**: the current directory for top-level rows, and the expanded directory for its children. Search results are not renormalized to 100%. Directory metadata also occupies blocks, so visible child percentages need not sum to 100%. Exact percentages appear only for complete entry and parent measurements. Pending, partial and excluded entries retain their status and must not be read as zero usage.
 
 扫描会先列出同级项目（包括隐藏项、空目录和链接），再深入子目录。达到数量或深度上限后，已列出的兄弟目录仍保留；“待统计”表示尚未扫描，“≥”表示已统计部分。双击待统计或未列全的目录会启动该目录的新一轮扫描。若单个目录自身的条目数也超过上限，列表仍可能不完整，并显示部分结果提示。符号链接、特殊文件和其他文件系统入口可见，但不跟随或合并计量；其他文件系统目录可单独打开分析。
 
@@ -154,7 +154,7 @@ Export refuses to overwrite existing inputs inside the scanned root. Choose a ne
 | 行为 / Behavior | 实现 / Implementation | 验证 / Verification |
 | --- | --- | --- |
 | 目录统计、重复哈希与边界 / Tree statistics, duplicate hashing, boundaries | [`spaceanalyzer.h`](../src/spaceanalyzer.h)、[`spaceanalyzer.cpp`](../src/spaceanalyzer.cpp) | [`spaceanalyzer_test.cpp`](../tests/spaceanalyzer_test.cpp) |
-| 层级导航、比例图、重复页、CSV / Navigation, chart, duplicates UI, CSV | [`explorerpage.cpp`](../src/explorerpage.cpp) | [`explorerpage_test.cpp`](../tests/explorerpage_test.cpp) |
+| 层级导航、逐行占用条、重复页、CSV / Navigation, inline usage bars, duplicates UI, CSV | [`explorerpage.cpp`](../src/explorerpage.cpp) | [`explorerpage_test.cpp`](../tests/explorerpage_test.cpp) |
 | 开发分类、去重与报告 / Developer classification, accounting, reports | [`developerbackend.cpp`](../src/developerbackend.cpp)、[`developerpage.cpp`](../src/developerpage.cpp) | [`developer_test.cpp`](../tests/developer_test.cpp)、[`developerpage_test.cpp`](../tests/developerpage_test.cpp) |
 | 软件目录关联与统计 / Application associations and measurement | [`appstorage.cpp`](../src/appstorage.cpp)、[`appstoragedialog.cpp`](../src/appstoragedialog.cpp) | [`appstorage_test.cpp`](../tests/appstorage_test.cpp)、[`appstoragedialog_test.cpp`](../tests/appstoragedialog_test.cpp) |
 

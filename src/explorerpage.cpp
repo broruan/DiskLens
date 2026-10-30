@@ -13,25 +13,21 @@
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
-#include <QFrame>
 #include <QHeaderView>
 #include <QHBoxLayout>
-#include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
 #include <QLocale>
 #include <QMessageBox>
-#include <QMouseEvent>
 #include <QPainter>
 #include <QPointer>
 #include <QProgressBar>
 #include <QPushButton>
 #include <QSaveFile>
-#include <QSignalBlocker>
-#include <QSplitter>
+#include <QStyledItemDelegate>
+#include <QStyle>
 #include <QTabWidget>
 #include <QTabBar>
-#include <QResizeEvent>
 #include <QTemporaryFile>
 #include <QTreeWidget>
 #include <QUrl>
@@ -48,6 +44,56 @@ namespace {
 constexpr int pathRole = Qt::UserRole;
 constexpr int directoryRole = Qt::UserRole + 1;
 constexpr int populatedRole = Qt::UserRole + 2;
+constexpr int allocationShareRole = Qt::UserRole + 3;
+constexpr int allocatedBytesRole = Qt::UserRole + 4;
+constexpr int parentAllocatedBytesRole = Qt::UserRole + 5;
+
+// Paint in the view rather than creating a widget for each scanned entry. The
+// tree still owns selection, accessibility, scrolling and lazy child expansion.
+class AllocationDelegate final : public QStyledItemDelegate {
+public:
+    explicit AllocationDelegate(QObject *parent) : QStyledItemDelegate(parent) {}
+
+    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override
+    {
+        return QStyledItemDelegate::sizeHint(option, index).expandedTo(
+            QSize(180, option.fontMetrics.height() + 24));
+    }
+
+    void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override
+    {
+        QStyleOptionViewItem background(option);
+        initStyleOption(&background, index);
+        const QString text = background.text;
+        background.text.clear();
+        const QStyle *style = option.widget ? option.widget->style() : QApplication::style();
+        style->drawControl(QStyle::CE_ItemViewItem, &background, painter, option.widget);
+
+        painter->save();
+        painter->setClipRect(option.rect);
+        painter->setRenderHint(QPainter::Antialiasing);
+        painter->setFont(background.font);
+        painter->setPen(QColor("#34415c"));
+        const QVariant share = index.data(allocationShareRole);
+        QRect textRect = option.rect.adjusted(10, 3, -10, share.isValid() ? -14 : -3);
+        painter->drawText(textRect, Qt::AlignRight | Qt::AlignVCenter,
+            background.fontMetrics.elidedText(text, Qt::ElideRight, qMax(0, textRect.width())));
+        if (share.isValid()) {
+            const QRectF track(option.rect.left() + 10, option.rect.bottom() - 10,
+                qMax(0, option.rect.width() - 20), 6);
+            painter->setPen(Qt::NoPen);
+            painter->setBrush(option.state & QStyle::State_Selected ? QColor("#d4dcf2") : QColor("#eef1f7"));
+            painter->drawRoundedRect(track, 3, 3);
+            QRectF fill = track;
+            fill.setWidth(track.width() * qBound(0.0, share.toDouble(), 1.0));
+            if (fill.width() > 0) {
+                painter->setBrush(QColor("#5268e9"));
+                painter->drawRoundedRect(fill, 3, 3);
+            }
+        }
+        painter->restore();
+    }
+};
 
 QLabel *label(const QString &text, const char *name = nullptr)
 {
@@ -268,159 +314,6 @@ public:
 };
 } // namespace
 
-// Every row uses the current directory's actual allocated bytes as its common
-// denominator. Clicking the whole row is deliberate: tiny and empty directories
-// remain reachable. The table retains every child omitted from this top 8 chart.
-class ExplorerMapWidget final : public QWidget {
-public:
-    explicit ExplorerMapWidget(QWidget *parent = nullptr) : QWidget(parent)
-    {
-        setObjectName(QStringLiteral("explorerMap"));
-        setMinimumSize(250, 250);
-        setFocusPolicy(Qt::StrongFocus);
-        setAccessibleName(dlTr("当前目录实际占用比例图"));
-        setToolTip(dlTr("按实际占用排序，显示当前层前 8 项；完整结果见左侧。当前目录自身的元数据计入总占用但不单独绘图。点击一行进入目录；文件会在列表中选中。"));
-        setMouseTracking(true);
-    }
-
-    void setNode(const SpaceNode *node, const QString &search)
-    {
-        m_items.clear(); m_total = node ? node->allocatedBytes : 0;
-        if (node) {
-            for (const auto *child : orderedChildren(*node)) {
-                if (matches(*child, search)) m_items.append(child);
-                if (m_items.size() == 8) break;
-            }
-        }
-        m_focus = m_items.isEmpty() ? -1 : 0;
-        updateMinimumHeight();
-        update();
-    }
-
-    std::function<void(const QString &, bool)> activate;
-
-protected:
-    void paintEvent(QPaintEvent *) override
-    {
-        QPainter painter(this); painter.setRenderHint(QPainter::Antialiasing);
-        painter.fillRect(rect(), Qt::white);
-        painter.setPen(QColor("#34415c")); QFont title = font(); title.setBold(true); painter.setFont(title);
-        painter.drawText(QRect(12, 6, width() - 24, fontMetrics().height()), Qt::AlignVCenter,
-            QFontMetrics(title).elidedText(dlTr("当前层 · 实际占用"), Qt::ElideRight, width()-24));
-        painter.setFont(font()); painter.setPen(QColor("#6f7d95"));
-        painter.drawText(subtitleRect(), Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap,
-            dlTr("条长 = 项目占用 / 当前目录总占用"));
-        if (m_items.isEmpty()) {
-            painter.drawText(rect().adjusted(15, rowsTop(), -15, -15), Qt::AlignCenter | Qt::TextWordWrap,
-                             dlTr("暂无可显示的子项\n扫描完成后，可点击占用条逐层查看"));
-            return;
-        }
-        QVariantList textBounds,barBounds;
-        const QColor colors[] = {QColor("#5268e9"), QColor("#36a98f"), QColor("#7d83d8"), QColor("#d59a36"),
-                                  QColor("#4399bf"), QColor("#ac6daf"), QColor("#7286a4"), QColor("#8ba95a")};
-        for (int i = 0; i < m_items.size(); ++i) {
-            const QRect row = rowRect(i); const auto *item = m_items[i];
-            if (i == m_focus && hasFocus()) painter.fillRect(row, QColor("#edf2ff"));
-            const double fraction = m_total ? qBound(0.0, double(item->allocatedBytes) / double(m_total), 1.0) : 0;
-            const QString suffix = item->state == SpaceNodeState::Complete
-                ? QStringLiteral("%1 · %2%").arg(formatBytes(item->allocatedBytes)).arg(fraction * 100, 0, 'f', 1)
-                : nodeBytes(*item,item->allocatedBytes);
-            const int valueWidth = painter.fontMetrics().horizontalAdvance(suffix);
-            const QRect text(row.left()+6, row.top()+2, row.width()-12, fontMetrics().height());
-            const int labelWidth = qMax(24, text.width()-valueWidth-12);
-            textBounds.append(text);
-            painter.setPen(QColor("#34415c"));
-            painter.drawText(QRect(text.topLeft(), QSize(labelWidth,text.height())), Qt::AlignLeft | Qt::AlignVCenter,
-                painter.fontMetrics().elidedText((item->directory ? QStringLiteral("▸ ") : QString()) + singleLine(item->name),
-                    Qt::ElideMiddle, labelWidth));
-            painter.setPen(QColor("#68758e"));
-            painter.drawText(text, Qt::AlignRight | Qt::AlignVCenter, suffix);
-            const QRectF track(row.left() + 6, row.bottom() - 10, row.width() - 12, 6);
-            barBounds.append(track.toRect());
-            painter.setPen(Qt::NoPen); painter.setBrush(QColor("#eef1f7")); painter.drawRoundedRect(track, 3, 3);
-            QRectF bar = track; bar.setWidth(track.width() * fraction);
-            if (bar.width() > 0) { painter.setBrush(colors[i]); painter.drawRoundedRect(bar, 3, 3); }
-        }
-        setProperty("chartTextRects",textBounds);
-        setProperty("chartBarRects",barBounds);
-        painter.setPen(QColor("#6f7d95"));
-        painter.drawText(QRect(12, rowsTop()+m_items.size()*rowHeight()+4, width()-24, fontMetrics().height()), Qt::AlignVCenter,
-                         dlTr("前 %1 项 · 点击进入目录").arg(m_items.size()));
-    }
-
-    void mousePressEvent(QMouseEvent *event) override
-    {
-        if (event->button() == Qt::LeftButton) {
-            for (int i = 0; i < m_items.size(); ++i) {
-                if (rowRect(i).contains(event->pos())) {
-                    m_focus = i; setFocus(); const auto *node = m_items[i];
-                    if (activate) activate(node->path, node->directory);
-                    return;
-                }
-            }
-        }
-        QWidget::mousePressEvent(event);
-    }
-
-    void mouseMoveEvent(QMouseEvent *event) override
-    {
-        bool over = false;
-        for (int i = 0; i < m_items.size(); ++i) if (rowRect(i).contains(event->pos())) {
-            const auto *node = m_items[i];
-            setToolTip(node->path + dlTr("\n逻辑大小：%1\n实际占用：%2\n%3")
-                .arg(nodeBytes(*node,node->logicalBytes), nodeBytes(*node,node->allocatedBytes),
-                     node->directory ? dlTr("点击进入目录") : dlTr("点击在列表中选择文件")));
-            over = true; break;
-        }
-        setCursor(over ? Qt::PointingHandCursor : Qt::ArrowCursor);
-        QWidget::mouseMoveEvent(event);
-    }
-
-    void keyPressEvent(QKeyEvent *event) override
-    {
-        if (event->key() == Qt::Key_Down && !m_items.isEmpty()) m_focus = (m_focus + 1) % m_items.size();
-        else if (event->key() == Qt::Key_Up && !m_items.isEmpty()) m_focus = (m_focus + m_items.size() - 1) % m_items.size();
-        else if ((event->key() == Qt::Key_Return || event->key() == Qt::Key_Space) && m_focus >= 0) {
-            const auto *node = m_items[m_focus]; if (activate) activate(node->path, node->directory);
-        } else { QWidget::keyPressEvent(event); return; }
-        update(); event->accept();
-    }
-
-    bool event(QEvent *event) override
-    {
-        const bool result=QWidget::event(event);
-        if (event->type()==QEvent::FontChange || event->type()==QEvent::Polish) updateMinimumHeight();
-        return result;
-    }
-    void resizeEvent(QResizeEvent *event) override
-    {
-        QWidget::resizeEvent(event);
-        if (event->size().width()!=event->oldSize().width()) updateMinimumHeight();
-    }
-private:
-    QRect subtitleRect() const
-    {
-        const int textWidth=qMax(1,width()-24);
-        const int height=fontMetrics().boundingRect(QRect(0,0,textWidth,1000), Qt::TextWordWrap,
-            dlTr("条长 = 项目占用 / 当前目录总占用")).height();
-        return QRect(12, 12+fontMetrics().height(),textWidth,height);
-    }
-    int rowsTop() const { return subtitleRect().bottom()+9; }
-    int rowHeight() const { return fontMetrics().height()+16; }
-    void updateMinimumHeight()
-    {
-        const int needed=qMax(250, rowsTop()+m_items.size()*rowHeight()+fontMetrics().height()+14);
-        if (minimumHeight()!=needed) { setMinimumHeight(needed); updateGeometry(); }
-    }
-    QRect rowRect(int index) const
-    {
-        return QRect(6, rowsTop()+index*rowHeight(), width()-12, rowHeight()-2);
-    }
-    QVector<const SpaceNode *> m_items;
-    quint64 m_total = 0;
-    int m_focus = -1;
-};
-
 ExplorerPage::ExplorerPage(QWidget *parent) : QWidget(parent)
 {
     createUi();
@@ -468,19 +361,22 @@ void ExplorerPage::createUi()
     navigation->addWidget(m_up); navigation->addWidget(m_home); navigation->addWidget(m_breadcrumb, 1);
     directoryLayout->addLayout(navigation);
     m_metrics = label(dlTr("尚未扫描"), "explorerMetrics"); m_metrics->setWordWrap(true); directoryLayout->addWidget(m_metrics);
-    auto *splitter = new QSplitter(Qt::Horizontal); splitter->setChildrenCollapsible(false);
     m_tree = new QTreeWidget; m_tree->setObjectName(QStringLiteral("explorerTree"));
     m_tree->setHeaderLabels({dlTr("名称 / 目录层级"), dlTr("实际占用"), dlTr("逻辑大小"), dlTr("文件数")});
     styleTree(m_tree);
-    // Keep a useful name column even when translated headers or totals grow.
-    // The user can resize every column and scroll horizontally for the rest.
+    // Keep the hierarchy resizable: deep indentation may need a wider name
+    // column than the viewport can provide, using horizontal scrolling.
     m_tree->header()->setStretchLastSection(false);
     m_tree->header()->setSectionResizeMode(QHeaderView::Interactive);
-    m_tree->setColumnWidth(0, 220); m_tree->setColumnWidth(1, 140);
-    m_tree->setColumnWidth(2, 140); m_tree->setColumnWidth(3, 90);
-    m_map = new ExplorerMapWidget;
-    splitter->addWidget(m_tree); splitter->addWidget(m_map); splitter->setStretchFactor(0, 3); splitter->setStretchFactor(1, 2); splitter->setSizes({540,390});
-    directoryLayout->addWidget(splitter, 1);
+    m_tree->setColumnWidth(0, 420);
+    m_tree->setColumnWidth(1, 260);
+    m_tree->setColumnWidth(2, 150); m_tree->setColumnWidth(3, 100);
+    m_tree->setItemDelegateForColumn(1, new AllocationDelegate(m_tree));
+    m_tree->setAccessibleName(dlTr("目录层级与实际占用"));
+    m_tree->setToolTip(dlTr("展开目录即可比较各级实际占用；占用条表示项目占父目录的比例，搜索不改变比例。双击目录可进入；未完成统计的项目不显示精确比例。"));
+    directoryLayout->addWidget(m_tree, 1);
+    auto *usageHint = label(dlTr("展开目录查看各级占用 · 条长 = 项目实际占用 / 所属父目录实际占用"), "explorerUsageHint");
+    usageHint->setWordWrap(true); directoryLayout->addWidget(usageHint);
     m_directoryNotice = label(dlTr("只读分析；逻辑大小是文件长度，实际占用是文件系统已分配空间，两者可能不同。"), "explorerDirectoryNotice");
     m_directoryNotice->setWordWrap(true); directoryLayout->addWidget(m_directoryNotice);
     m_tabs->addTab(directoryTab, dlTr("目录空间分析"));
@@ -549,13 +445,6 @@ void ExplorerPage::createUi()
     });
     connect(m_tree, &QTreeWidget::itemSelectionChanged, this, &ExplorerPage::updateSelection);
     connect(m_duplicateTree, &QTreeWidget::itemSelectionChanged, this, &ExplorerPage::updateSelection);
-    m_map->activate = [this](const QString &path, bool directory) {
-        if (directory) { showDirectory(path); return; }
-        for (int row = 0; row < m_tree->topLevelItemCount(); ++row) {
-            auto *item = m_tree->topLevelItem(row);
-            if (item->data(0, pathRole).toString() == path) { m_tree->setCurrentItem(item); m_tree->scrollToItem(item); break; }
-        }
-    };
     connect(m_copy, &QPushButton::clicked, this, [this] { QApplication::clipboard()->setText(selectedPath()); });
     connect(m_open, &QPushButton::clicked, this, [this] {
         const QString path = selectedPath(); if (path.isEmpty()) return;
@@ -584,7 +473,7 @@ void ExplorerPage::setRoot(const QString &root)
     m_root = value; m_currentPath.clear(); m_directoryDone = false; m_duplicatesDone = false;
     m_duplicatesRequested = false;
     m_directoryResult = {}; m_duplicateResult = {};
-    m_map->setNode(nullptr, {}); m_tree->clear(); m_duplicateTree->clear();
+    m_tree->clear(); m_duplicateTree->clear();
     m_search->clear();
     m_metrics->setText(dlTr("尚未扫描")); m_breadcrumb->setText(dlTr("扫描根目录：") + m_root);
     m_breadcrumb->setToolTip(m_root); m_duplicateSummary->setText(dlTr("尚未查找重复文件"));
@@ -614,7 +503,7 @@ void ExplorerPage::startDirectoryScan()
 {
     if (isBusy() || m_shuttingDown) return;
     m_busy = true; m_cancel.store(false); m_directoryDone = false;
-    m_map->setNode(nullptr, {}); m_tree->clear(); m_currentPath.clear();
+    m_tree->clear(); m_currentPath.clear();
     m_directoryResult = {}; m_metrics->setText(dlTr("正在统计目录…"));
     m_status->setText(dlTr("只读扫描中：") + m_root);
     m_directoryNotice->setText(dlTr("正在读取目录元数据；逻辑大小与实际占用分别统计，符号链接与其他挂载点会跳过。"));
@@ -739,6 +628,17 @@ void ExplorerPage::addChildren(QTreeWidgetItem *parent, const SpaceNode &node)
         auto *item = new QTreeWidgetItem;
         item->setFlags(item->flags() & ~Qt::ItemIsUserCheckable);
         item->setText(0, singleLine(child->name)); item->setText(1, nodeBytes(*child,child->allocatedBytes));
+        item->setData(1, allocatedBytesRole, QVariant::fromValue(child->allocatedBytes));
+        item->setData(1, parentAllocatedBytesRole, QVariant::fromValue(node.allocatedBytes));
+        // An incomplete denominator is a lower bound, so even a complete child
+        // must not acquire an apparently exact percentage of that total.
+        const bool hasShare = child->state == SpaceNodeState::Complete
+            && node.state == SpaceNodeState::Complete && node.allocatedBytes > 0;
+        if (hasShare) {
+            const double share = qBound(0.0, double(child->allocatedBytes) / double(node.allocatedBytes), 1.0);
+            item->setData(1, allocationShareRole, share);
+            item->setText(1, dlTr("%1 · %2%").arg(item->text(1), QLocale().toString(share * 100, 'f', 1)));
+        }
         const bool measured = child->state == SpaceNodeState::Complete || child->state == SpaceNodeState::Partial;
         item->setText(2, measured ? nodeBytes(*child,child->logicalBytes) : QStringLiteral("—"));
         item->setText(3, nodeFileCount(*child));
@@ -747,6 +647,12 @@ void ExplorerPage::addChildren(QTreeWidgetItem *parent, const SpaceNode &node)
         for (int column = 0; column < 4; ++column) item->setToolTip(column, child->path
             + dlTr("\n实际占用：%1\n逻辑大小：%2\n文件数：%3").arg(item->text(1),item->text(2),item->text(3))
             + (nodeStateText(*child).isEmpty() ? QString() : QStringLiteral("\n")+nodeStateText(*child)));
+        const QString shareHint = hasShare
+            ? dlTr("\n占所属父目录的实际占用：%1\n父目录：%2（%3）")
+                .arg(QLocale().toString(item->data(1, allocationShareRole).toDouble() * 100, 'f', 1) + QLatin1Char('%'),
+                     node.path, formatBytes(node.allocatedBytes))
+            : dlTr("\n项目或父目录未完成统计，或项目不计量；不显示精确占比。");
+        item->setToolTip(1, item->toolTip(1) + shareHint);
         for (int column = 1; column < 4; ++column) item->setTextAlignment(column, Qt::AlignRight | Qt::AlignVCenter);
         if (parent) parent->addChild(item); else m_tree->addTopLevelItem(item);
         if (child->directory && !child->children.isEmpty()) item->setChildIndicatorPolicy(QTreeWidgetItem::ShowIndicator);
@@ -765,7 +671,7 @@ void ExplorerPage::showDirectory(const QString &path)
         return;
     }
     m_currentPath = node->path;
-    m_tree->clear(); addChildren(nullptr, *node); m_map->setNode(node, m_search->text().trimmed());
+    m_tree->clear(); addChildren(nullptr, *node);
     QString relative = QDir(m_directoryResult.root.path).relativeFilePath(node->path);
     m_breadcrumb->setText(relative == QStringLiteral(".") ? dlTr("扫描根目录：") + node->path
         : dlTr("当前层：") + relative.replace(QLatin1Char('/'), QStringLiteral(" / ")));
@@ -938,7 +844,7 @@ bool ExplorerPage::exportReport(const QString &path, QString *error) const
 bool ExplorerPage::verifyUi(QString *error)
 {
     const auto fail = [error](const QString &message) { if (error) *error = message; return false; };
-    if (!m_tree || !m_map || !m_duplicateTree || !m_tabs) return fail(dlTr("空间分析控件缺失"));
+    if (!m_tree || !m_duplicateTree || !m_tabs) return fail(dlTr("空间分析控件缺失"));
     if (m_tabs->count() != 2) return fail(dlTr("空间分析 tab 数量错误"));
     if (m_export->isEnabled() && m_busy) return fail(dlTr("扫描中不应允许导出旧结果"));
     if (m_tree->palette().color(QPalette::HighlightedText).lightness() > 160)

@@ -57,7 +57,7 @@ flowchart TD
 | [`src/cachebackend.cpp`](../src/cachebackend.cpp) | Cache / log grouping, signed in-process scan manifests, path and file revalidation, selected-file unlinking. 缓存日志分组、进程内快照签名、路径与文件复核、删除所选文件。 |
 | [`src/uninstallcontroller.cpp`](../src/uninstallcontroller.cpp) | Asynchronous preview / revalidation / removal stages, process logs, identifier checks, package protection. 异步预览、复核与卸载状态机、日志、标识校验与组件保护。 |
 | [`src/spaceanalyzer.cpp`](../src/spaceanalyzer.cpp) | Bounded directory hierarchy and complete SHA-256 verification behind a read-only interface. 有界目录层级统计与完整 SHA-256 校验。 |
-| [`src/explorerpage.cpp`](../src/explorerpage.cpp) | Drill-down navigation, allocation chart, explicit hashing and report export. 逐层导航、占用比例图、显式哈希与报告导出。 |
+| [`src/explorerpage.cpp`](../src/explorerpage.cpp) | Expandable directory tree with per-row allocation bars, parent-relative percentages, drill-down navigation, explicit hashing and report export. 可展开目录树、逐行占用条、相对父目录占比、逐层导航、显式哈希与报告导出。 |
 | [`src/developerbackend.cpp`](../src/developerbackend.cpp) / [`src/developerpage.cpp`](../src/developerpage.cpp) | Evidence-based classification, disjoint totals, explanations and export. 基于结构证据分类、避免重叠计量、用途说明与导出。 |
 | [`src/appstorage.cpp`](../src/appstorage.cpp) / [`src/appstoragedialog.cpp`](../src/appstoragedialog.cpp) | Explicit application data associations and separate per-location measurements. 明确关联规则与逐目录统计。 |
 | [`tests/`](../tests) | Backend fixtures, installed-system read-only checks, and styled cache-page regression tests. 后端临时目录测试、已安装系统只读检查与正式样式界面回归。 |

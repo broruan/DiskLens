@@ -176,6 +176,6 @@ Flatpak 通过 `--app --no-related` 卸载用户或系统安装范围内的所�
 
 ## New analysis tools / 新分析工具
 
-Version 1.2 added the **Space explorer** and **Developer tools** pages, plus **Storage profile** on the Installed apps page. See [the bilingual analysis guide](analysis-tools.md) for exact workflows, evidence rules and accounting. These views inspect and export; they do not delete duplicate files, developer outputs or application data.
+Version 1.2 added the **Space explorer** and **Developer tools** pages, plus **Storage profile** on the Installed apps page. In 1.5, expanding a Space explorer directory shows allocated-space bars and sizes alongside its children; percentages are relative to each entry's immediate parent and are not renormalized by search. Incomplete measurements retain their status instead of an exact percentage. See [the bilingual analysis guide](analysis-tools.md) for exact workflows, evidence rules and accounting. These views inspect and export; they do not delete duplicate files, developer outputs or application data.
 
-1.2 新增 **空间分析**、**开发环境** 页面，以及软件列表中的 **空间画像**。具体操作、识别证据和统计口径见 [双语分析指南](analysis-tools.md)。这些功能用于查看和导出，不删除重复文件、开发产物或软件用户数据。
+1.2 新增 **空间分析**、**开发环境** 页面，以及软件列表中的 **空间画像**。1.5 将实际占用进度条与目录层级合并，展开目录即可在子项行中查看大小；占比相对各条目的直属父目录，搜索不会重新归一化，统计不完整时显示状态而非精确百分比。具体操作、识别证据和统计口径见 [双语分析指南](analysis-tools.md)。这些功能用于查看和导出，不删除重复文件、开发产物或软件用户数据。

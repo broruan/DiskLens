@@ -14,7 +14,6 @@ class QPushButton;
 class QTabWidget;
 class QTreeWidget;
 class QTreeWidgetItem;
-class ExplorerMapWidget;
 
 // Read-only directory exploration and explicitly requested duplicate hashing.
 // Closing the page cancels workers and waits before releasing their state.
@@ -83,7 +82,6 @@ private:
     QTabWidget *m_tabs = nullptr;
     QTreeWidget *m_tree = nullptr;
     QTreeWidget *m_duplicateTree = nullptr;
-    ExplorerMapWidget *m_map = nullptr;
     QLabel *m_breadcrumb = nullptr;
     QLabel *m_metrics = nullptr;
     QLabel *m_directoryNotice = nullptr;

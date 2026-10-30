@@ -24,6 +24,15 @@ User files and caches are excluded. Shared data may be counted more than once. 0
     <message>
       <location filename="../src/explorerpage.cpp" />
       <source>
+占所属父目录的实际占用：%1
+父目录：%2（%3）</source>
+      <translation>
+Share of parent allocation: %1
+Parent: %2 (%3)</translation>
+    </message>
+    <message>
+      <location filename="../src/explorerpage.cpp" />
+      <source>
 完整 SHA-256：</source>
       <translation>
 Full SHA-256: </translation>
@@ -107,13 +116,9 @@ Logical size: </translation>
     <message>
       <location filename="../src/explorerpage.cpp" />
       <source>
-逻辑大小：%1
-实际占用：%2
-%3</source>
+项目或父目录未完成统计，或项目不计量；不显示精确占比。</source>
       <translation>
-Logical size: %1
-Allocated size: %2
-%3</translation>
+The entry or parent is incomplete, or the entry is excluded from accounting; no exact percentage is shown.</translation>
     </message>
     <message>
       <location filename="../src/explorerpage.cpp" />
@@ -191,6 +196,11 @@ Allocated size: %2
       <location filename="../src/developerpage.cpp" />
       <source>%1 · %2 个文件 / %3 个目录</source>
       <translation>%1 · %2 files / %3 directories</translation>
+    </message>
+    <message>
+      <location filename="../src/explorerpage.cpp" />
+      <source>%1 · %2%</source>
+      <translation>%1 · %2%</translation>
     </message>
     <message>
       <location filename="../src/cachepage.cpp" />
@@ -688,11 +698,6 @@ Allocated size: %2
       <translation>Refresh data</translation>
     </message>
     <message>
-      <location filename="../src/explorerpage.cpp" />
-      <source>前 %1 项 · 点击进入目录</source>
-      <translation>Top %1 items · Click to open a directory</translation>
-    </message>
-    <message>
       <location filename="../src/developerbackend.cpp" />
       <source>包含 conda-meta 包记录的 Conda 依赖环境。</source>
       <translation>Conda dependency environment containing conda-meta package records.</translation>
@@ -1038,6 +1043,16 @@ Snap does not provide an uninstall transaction simulation, so dependencies canno
       <translation>Duplicates have not been scanned yet</translation>
     </message>
     <message>
+      <location filename="../src/explorerpage.cpp" />
+      <source>展开目录即可比较各级实际占用；占用条表示项目占父目录的比例，搜索不改变比例。双击目录可进入；未完成统计的项目不显示精确比例。</source>
+      <translation>Expand folders to compare allocated space at every level. Bars show each entry’s share of its parent; search does not change the shares. Double-click a folder to enter it. Incomplete measurements have no exact percentage.</translation>
+    </message>
+    <message>
+      <location filename="../src/explorerpage.cpp" />
+      <source>展开目录查看各级占用 · 条长 = 项目实际占用 / 所属父目录实际占用</source>
+      <translation>Expand folders to inspect each level · Bar length = entry allocation / parent folder allocation</translation>
+    </message>
+    <message>
       <location filename="../src/developerpage.cpp" />
       <source>嵌套分组和硬链接不重复相加</source>
       <translation>Nested groups and hard links are counted once</translation>
@@ -1225,11 +1240,6 @@ Snap does not provide an uninstall transaction simulation, so dependencies canno
     </message>
     <message>
       <location filename="../src/explorerpage.cpp" />
-      <source>当前层 · 实际占用</source>
-      <translation>Current level · Allocated size</translation>
-    </message>
-    <message>
-      <location filename="../src/explorerpage.cpp" />
       <source>当前层：</source>
       <translation>Current level: </translation>
     </message>
@@ -1257,11 +1267,6 @@ Snap does not provide an uninstall transaction simulation, so dependencies canno
       <location filename="../src/cachepage.cpp" />
       <source>当前用户范围：%1（缓存与日志）；%2。直接删除文件，不进入回收站；不清理系统日志。</source>
       <translation>Current user scope: %1 (cache and logs); %2. Files are deleted directly, bypassing Trash. System logs are excluded.</translation>
-    </message>
-    <message>
-      <location filename="../src/explorerpage.cpp" />
-      <source>当前目录实际占用比例图</source>
-      <translation>Allocated space chart for the current directory</translation>
     </message>
     <message>
       <location filename="../src/explorerpage.cpp" />
@@ -1518,11 +1523,6 @@ Check the directory on the Large files page.</translation>
       <location filename="../src/appstorage.cpp" />
       <source>按内置软件包与目录名称规则关联，请核对路径；不保证覆盖此应用的全部数据。</source>
       <translation>Matched using built-in package and directory naming rules. Check the paths; this may not cover all data for this app.</translation>
-    </message>
-    <message>
-      <location filename="../src/explorerpage.cpp" />
-      <source>按实际占用排序，显示当前层前 8 项；完整结果见左侧。当前目录自身的元数据计入总占用但不单独绘图。点击一行进入目录；文件会在列表中选中。</source>
-      <translation>Top 8 items at this level, sorted by allocated size; full results are on the left. Metadata for the current directory is included in the total but not drawn separately. Click a row to open a directory or select a file in the list.</translation>
     </message>
     <message>
       <location filename="../src/developerbackend.cpp" />
@@ -1808,13 +1808,6 @@ Canceling cleanup only stops further deletion. Files already deleted cannot be r
       <translation>Regular cache · </translation>
     </message>
     <message>
-      <location filename="../src/explorerpage.cpp" />
-      <source>暂无可显示的子项
-扫描完成后，可点击占用条逐层查看</source>
-      <translation>No child items to display
-After scanning, click a bar to explore each level</translation>
-    </message>
-    <message>
       <location filename="../src/mainwindow.cpp" />
       <source>最多展示最大的 500 个文件；硬链接只计一次。仅扫描当前用户可访问的目录，跳过项和中止状态会显示在扫描结果中。</source>
       <translation>Shows up to the 500 largest files; hard links are counted once. Only directories accessible to the current user are scanned. Results show skipped entries and whether the scan was stopped.</translation>
@@ -1913,11 +1906,6 @@ After scanning, click a bar to explore each level</translation>
       <location filename="../src/cachebackend.cpp" />
       <source>条目不属于已授权的缓存/日志根目录。</source>
       <translation>The entry is outside the authorized cache / log roots.</translation>
-    </message>
-    <message>
-      <location filename="../src/explorerpage.cpp" />
-      <source>条长 = 项目占用 / 当前目录总占用</source>
-      <translation>Bar length = item allocation / current directory total</translation>
     </message>
     <message>
       <location filename="../src/models.cpp" />
@@ -2174,19 +2162,9 @@ Try another directory or file size threshold.</translation>
       <translation>Point clouds / large data</translation>
     </message>
     <message>
-      <location filename="../src/explorerpage.cpp" />
-      <source>点击在列表中选择文件</source>
-      <translation>Click to select this file in the list</translation>
-    </message>
-    <message>
       <location filename="../src/cachepage.cpp" />
       <source>点击行或复选框勾选，再次点击取消；空格键也可切换。</source>
       <translation>Click a row or checkbox to toggle its selection. You can also press Space.</translation>
-    </message>
-    <message>
-      <location filename="../src/explorerpage.cpp" />
-      <source>点击进入目录</source>
-      <translation>Click to open this directory</translation>
     </message>
     <message>
       <location filename="../src/cachebackend.cpp" />
@@ -2245,6 +2223,11 @@ Try another directory or file size threshold.</translation>
 </source>
       <translation>The directory may have moved, or no file manager is configured.
 </translation>
+    </message>
+    <message>
+      <location filename="../src/explorerpage.cpp" />
+      <source>目录层级与实际占用</source>
+      <translation>Directory hierarchy and allocated space</translation>
     </message>
     <message>
       <location filename="../src/explorerpage.cpp" />

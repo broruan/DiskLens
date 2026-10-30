@@ -1,5 +1,15 @@
 # Validation scope / 验证范围
 
+## Version 1.5.0 / 版本 1.5.0
+
+On 2026-10-30, a fresh Ubuntu 22.04 amd64 / Qt 5.15.3 release build passed all 13 CTest targets. The merged-tree regressions cover expanded child allocation bars, immediate-parent denominators, unchanged ratios under search, entries beyond the former eight-row chart limit, partial/pending/excluded states, selected text contrast and large-font text/bar separation. The generated `disklens_1.5.0_ubuntu22.04_amd64.deb` passed metadata, ELF, dependencies, desktop/icon assets, checksums and `--version` verification.
+
+The final production executable passed 28 read-only smoke checks: all seven pages × English/Chinese × 13/18 px, with disposable scan/cache/state/config directories. Expanded-directory screenshots were reviewed in Chinese at 13 px and English/Chinese at 18 px; the README Space Analysis screenshot was refreshed. All 546 translations and placeholders passed validation. These are automated/offscreen checks and do not establish physical desktop or GPU behavior. Remote release results are recorded only after the exact tag's workflow completes.
+
+2026-10-30，Ubuntu 22.04 amd64 / Qt 5.15.3 全新发布构建通过全部 13 个 CTest 目标。合并目录树的回归检查覆盖展开后的子项占用条、直属父目录分母、搜索后占比保持不变、超过原图表前八项的条目、不完整/待统计/排除项状态、选中行文字对比度及大字号文字与占用条分离。生成的 `disklens_1.5.0_ubuntu22.04_amd64.deb` 通过元数据、ELF、依赖、桌面/图标资源、校验及版本检查。
+
+最终正式程序使用临时扫描、缓存、状态与配置目录，通过七类页面 × 中英文 × 13/18 px 共 28 组只读界面检查。已核对中文 13 px 及中英文 18 px 的展开目录截图，并更新 README 空间分析截图；546 条翻译与占位符检查通过。上述自动化和离屏结果不代表实体桌面或 GPU 行为；远程发布结果仅在对应标签的工作流完成后记录。
+
 ## Version 1.4.1 / 版本 1.4.1
 
 On 2026-10-30, the sibling-visibility regression reproduced the previous defect: a fixture with Documents, Downloads, Desktop and a file displayed only one of four immediate entries when the node budget was exhausted. The corrected traversal retains all four entries, explicitly marks pending/partial measurements, and allows pending folders to be scanned separately. A read-only comparison against the local home directory found 75 immediate entries and all 75 in the scan result, with zero missing; the 100,000-node bound still left 34 directories pending. This verifies visibility, not complete home-folder size accounting.

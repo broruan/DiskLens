@@ -43,7 +43,6 @@ QByteArray readFile(const QString &path)
 struct Controls {
     QTreeWidget *tree;
     QTreeWidget *duplicates;
-    QWidget *map;
     QLabel *breadcrumb;
     QLineEdit *search;
     QPushButton *up;
@@ -55,7 +54,7 @@ struct Controls {
 Controls controls(ExplorerPage &page)
 {
     return {page.findChild<QTreeWidget *>("explorerTree"), page.findChild<QTreeWidget *>("explorerDuplicates"),
-        page.findChild<QWidget *>("explorerMap"), page.findChild<QLabel *>("explorerBreadcrumb"),
+        page.findChild<QLabel *>("explorerBreadcrumb"),
         page.findChild<QLineEdit *>("explorerSearch"), page.findChild<QPushButton *>("explorerUp"),
         page.findChild<QPushButton *>("explorerDuplicateScan"), page.findChild<QComboBox *>("explorerMinimum"),
         page.findChild<QLabel *>("explorerDuplicateSummary")};
@@ -63,14 +62,30 @@ Controls controls(ExplorerPage &page)
 
 bool valid(const Controls &c)
 {
-    return c.tree && c.duplicates && c.map && c.breadcrumb && c.search && c.up && c.duplicateScan && c.minimum && c.summary;
+    return c.tree && c.duplicates && c.breadcrumb && c.search && c.up && c.duplicateScan && c.minimum && c.summary;
+}
+
+bool hasAllocationBar(QTreeWidget *tree, QTreeWidgetItem *item)
+{
+    tree->scrollToItem(item);
+    QCoreApplication::processEvents();
+    const QRect row = tree->visualItemRect(item);
+    const QRect bounds(tree->columnViewportPosition(1), row.top(), tree->columnWidth(1), row.height());
+    const QImage cell = tree->viewport()->grab(bounds).toImage();
+    int blue = 0;
+    for (int y = 0; y < cell.height(); ++y) for (int x = 0; x < cell.width(); ++x) {
+        const QColor pixel = cell.pixelColor(x, y);
+        if (pixel.blue() > pixel.red() + 50 && pixel.blue() > pixel.green() + 30) ++blue;
+    }
+    return blue > 10;
 }
 }
 
 class ExplorerPageTest : public QObject {
     Q_OBJECT
 private slots:
-    void directoryNavigationAndChart();
+    void directoryNavigationAndInlineBars();
+    void expandedRowsUseParentAllocationAndSurviveFiltering();
     void duplicateScanIsExplicitAndFiltered();
     void reportEscapingAndPartialResults();
     void cancelAndWorkerLifetime();
@@ -78,12 +93,13 @@ private slots:
     void openingPendingDirectoryStartsFocusedScan();
 };
 
-void ExplorerPageTest::directoryNavigationAndChart()
+void ExplorerPageTest::directoryNavigationAndInlineBars()
 {
     QTemporaryDir temporary; QVERIFY(temporary.isValid()); QVERIFY(fixture(temporary.path()));
     ExplorerPage page; page.setRoot(temporary.path()); page.resize(1150, 760); page.show();
     QVERIFY(!page.isBusy()); page.ensureScanStarted(); QTRY_VERIFY_WITH_TIMEOUT(page.isSettled(), 10000);
     const auto c = controls(page); QVERIFY(valid(c));
+    QVERIFY(!page.findChild<QWidget *>("explorerMap"));
     QCOMPARE(c.tree->topLevelItemCount(), 3); QVERIFY(c.up->isEnabled());
     QVERIFY(!page.findChild<QPushButton*>("explorerHome")->isEnabled());
     QCOMPARE(c.tree->topLevelItem(0)->text(0), QStringLiteral("largest"));
@@ -107,19 +123,57 @@ void ExplorerPageTest::directoryNavigationAndChart()
     QTest::mouseClick(c.up, Qt::LeftButton); QCOMPARE(c.tree->topLevelItemCount(), 3);
     QVERIFY(c.up->isEnabled());
     QVERIFY(!page.findChild<QPushButton*>("explorerHome")->isEnabled());
-    // The first full-width graph row represents the largest actual allocation.
-    QTest::mouseClick(c.map, Qt::LeftButton, Qt::NoModifier, QPoint(c.map->width() / 2, 70));
-    QTRY_VERIFY(c.breadcrumb->text().contains(QStringLiteral("largest")));
-    QCOMPARE(c.tree->topLevelItemCount(), 2);
-    QTest::mouseClick(c.up, Qt::LeftButton);
     auto *directory = c.tree->topLevelItem(0); directory->setExpanded(true);
     QCOMPARE(directory->childCount(), 2);
+    QVERIFY(hasAllocationBar(c.tree, directory));
+    QVERIFY(hasAllocationBar(c.tree, directory->child(0)));
     c.search->setText(QStringLiteral("copy.bin")); QTRY_COMPARE(c.tree->topLevelItemCount(), 1);
     QCOMPARE(c.tree->topLevelItem(0)->text(0), QStringLiteral("second")); c.search->clear();
     QString error; QVERIFY2(page.verifyUi(&error), qPrintable(error));
     QVERIFY(QFileInfo::exists(temporary.path() + "/largest/unique.bin"));
+    c.tree->topLevelItem(0)->setExpanded(true);
+    QCoreApplication::processEvents();
     const QString artifacts = QDir::current().absoluteFilePath(QStringLiteral("artifacts"));
     QVERIFY(QDir().mkpath(artifacts)); QVERIFY(page.grab().save(artifacts + "/explorer-production-ui.png"));
+}
+
+void ExplorerPageTest::expandedRowsUseParentAllocationAndSurviveFiltering()
+{
+    QTemporaryDir temporary; QVERIFY(temporary.isValid());
+    for (int i = 0; i < 12; ++i)
+        QVERIFY(writeFile(temporary.filePath(QStringLiteral("folder-%1/payload.bin").arg(i, 2, 10, QLatin1Char('0'))),
+                          4096 * (i + 1), 'x'));
+    const auto expected = analyzeDirectory(temporary.path());
+    QVERIFY(expected.error.isEmpty());
+    const SpaceNode *expectedFolder = nullptr;
+    for (const auto &child : expected.root.children)
+        if (child.name == QStringLiteral("folder-11")) expectedFolder = &child;
+    QVERIFY(expectedFolder); QCOMPARE(expectedFolder->children.size(), 1);
+    ExplorerPage page; page.setRoot(temporary.path()); page.resize(1150, 760); page.show(); page.ensureScanStarted();
+    QTRY_VERIFY_WITH_TIMEOUT(page.isSettled(), 10000);
+    const auto c = controls(page); QVERIFY(valid(c));
+    QCOMPARE(c.tree->topLevelItemCount(), 12);
+    auto *folder = c.tree->topLevelItem(0);
+    QCOMPARE(folder->text(0), QStringLiteral("folder-11"));
+    const double folderShare = double(expectedFolder->allocatedBytes) / double(expected.root.allocatedBytes);
+    QCOMPARE(folder->data(1, Qt::UserRole + 3).toDouble(), folderShare);
+    QCOMPARE(folder->data(1, Qt::UserRole + 4).toULongLong(), expectedFolder->allocatedBytes);
+    QCOMPARE(folder->data(1, Qt::UserRole + 5).toULongLong(), expected.root.allocatedBytes);
+    QVERIFY(folder->text(1).contains(QLatin1Char('%')));
+    folder->setExpanded(true); QCOMPARE(folder->childCount(), 1);
+    auto *payload = folder->child(0);
+    const double payloadShare = double(expectedFolder->children.first().allocatedBytes) / double(expectedFolder->allocatedBytes);
+    QCOMPARE(payload->data(1, Qt::UserRole + 3).toDouble(), payloadShare);
+    QCOMPARE(payload->data(1, Qt::UserRole + 5).toULongLong(), expectedFolder->allocatedBytes);
+    QVERIFY(hasAllocationBar(c.tree, payload));
+    // Occupancy stays available for rows beyond the old eight-item chart limit.
+    QVERIFY(hasAllocationBar(c.tree, c.tree->topLevelItem(10)));
+    c.search->setText(QStringLiteral("folder-11")); QTRY_COMPARE(c.tree->topLevelItemCount(), 1);
+    folder = c.tree->topLevelItem(0);
+    QCOMPARE(folder->data(1, Qt::UserRole + 3).toDouble(), folderShare);
+    QVERIFY(folderShare < 1.0);
+    folder->setExpanded(true); QCOMPARE(folder->childCount(), 1);
+    QCOMPARE(folder->child(0)->data(1, Qt::UserRole + 3).toDouble(), payloadShare);
 }
 
 void ExplorerPageTest::parentScopeClearsFilterAndShowsAllSiblings()
@@ -148,6 +202,8 @@ void ExplorerPageTest::parentScopeClearsFilterAndShowsAllSiblings()
         QVERIFY(names.contains(name));
     auto *item=c.tree->findItems("document-link",Qt::MatchExactly).first();
     QVERIFY(item->text(1).contains(QStringLiteral("符号链接")));
+    QVERIFY(!item->data(1, Qt::UserRole + 3).isValid());
+    QVERIFY(!item->text(1).contains(QLatin1Char('%')));
     QVERIFY(page.findChild<QPushButton*>("explorerUserHome"));
 }
 
@@ -162,10 +218,14 @@ void ExplorerPageTest::openingPendingDirectoryStartsFocusedScan()
     const auto c=controls(page); QVERIFY(valid(c));
     QTreeWidgetItem *pending=c.tree->topLevelItem(0); QVERIFY(pending);
     while(!pending->text(1).contains(QStringLiteral("待统计"))) {
+        // A partial parent has no complete total, so no exact percentage is shown.
+        QVERIFY(!pending->data(1, Qt::UserRole + 3).isValid());
+        QVERIFY(!pending->text(1).contains(QLatin1Char('%')));
         pending->setExpanded(true);
         QCOMPARE(pending->childCount(),1);
         pending=pending->child(0);
     }
+    QVERIFY(!pending->data(1, Qt::UserRole + 3).isValid());
     const QString focusedRoot=pending->data(0,Qt::UserRole).toString();
     QVERIFY(QMetaObject::invokeMethod(c.tree,"itemDoubleClicked",Qt::DirectConnection,
         Q_ARG(QTreeWidgetItem*,pending),Q_ARG(int,0)));

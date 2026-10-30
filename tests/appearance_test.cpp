@@ -358,29 +358,30 @@ void AppearanceTest::explorerLargeFontLayout()
         QVERIFY(bar->tabRect(i).width()>=selectedTabMetrics.horizontalAdvance(bar->tabText(i))+32);
         QVERIFY(bar->tabRect(i).height()>=bar->fontMetrics().height()+12);
     }
-    auto *map=explorer->findChild<QWidget*>("explorerMap");
-    QVERIFY(map);
-    const QImage chart=map->grab().toImage();
+    QVERIFY(!explorer->findChild<QWidget*>("explorerMap"));
+    tree->topLevelItem(0)->setExpanded(true);
+    QCOMPARE(tree->topLevelItem(0)->childCount(),1);
+    const QImage chart=tree->viewport()->grab().toImage();
     const QString chartCapture=qEnvironmentVariable("DISKLENS_CHART_CAPTURE");
     if(!chartCapture.isEmpty()) QVERIFY(chart.save(chartCapture));
-    // Every painted row reserves a full font-height text area above its bar;
-    // the first and last row also contain visible dark text in the raster.
-    const QVariantList textRects=map->property("chartTextRects").toList();
-    const QVariantList barRects=map->property("chartBarRects").toList();
-    QCOMPARE(textRects.size(),8); QCOMPARE(barRects.size(),8);
-    for(int i=0;i<textRects.size();++i) {
-        const QRect text=textRects[i].toRect(),bar=barRects[i].toRect();
-        QVERIFY(text.height()>=map->fontMetrics().height());
-        QVERIFY(text.bottom()<bar.top());
-        QVERIFY(map->rect().contains(text));
-    }
-    for(int i : {0,7}) {
-        const QRect text=textRects[i].toRect(); int ink=0;
-        for(int y=text.top();y<=text.bottom();++y) for(int x=text.left();x<=text.right();++x) {
-            const QColor pixel=chart.pixelColor(x,y);
-            if(pixel.red()<100 && pixel.green()<125 && pixel.blue()<170) ++ink;
+    // At the largest font, both allocation text and bars fit in parent and
+    // expanded child cells. Inspect the production raster, including a scrolled row.
+    for(auto *item : {tree->topLevelItem(0),tree->topLevelItem(0)->child(0),tree->topLevelItem(7)}) {
+        tree->scrollToItem(item); QCoreApplication::processEvents();
+        const QRect row=tree->visualItemRect(item);
+        QVERIFY(row.height()>=tree->fontMetrics().height()+12);
+        const QRect bounds(tree->columnViewportPosition(1),row.top(),tree->columnWidth(1),row.height());
+        const QImage cell=tree->viewport()->grab(bounds).toImage();
+        QVERIFY(tree->columnWidth(1)>=tree->fontMetrics().horizontalAdvance(item->text(1))+20);
+        int ink=0,blue=0,inkBottom=-1,blueTop=cell.height();
+        for(int y=0;y<cell.height();++y) for(int x=0;x<cell.width();++x) {
+            const QColor pixel=cell.pixelColor(x,y);
+            if(pixel.red()<100 && pixel.green()<125 && pixel.blue()<170) { ++ink; inkBottom=qMax(inkBottom,y); }
+            if(pixel.blue()>pixel.red()+50 && pixel.blue()>pixel.green()+30) { ++blue; blueTop=qMin(blueTop,y); }
         }
         QVERIFY(ink>30);
+        QVERIFY(blue>10);
+        QVERIFY2(inkBottom<blueTop,"Large-font allocation text must fit above the inline bar.");
     }
     tree->setCurrentItem(tree->topLevelItem(0));
     QTest::qWait(30);

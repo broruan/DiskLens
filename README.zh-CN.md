@@ -23,7 +23,7 @@
 
 磁盘透镜是一款使用 **Qt Widgets 与 C++17** 编写的桌面磁盘空间管理应用，直接读取本机文件系统和软件包信息。**应用内可切换简体中文与 English，并调整界面字体大小**；项目文档也提供独立的中英双语版本。截图来自真实程序，扫描目录使用示例数据，已安装软件信息来自截图环境的实际读取。
 
-**1.4 新版界面：** 浅色工作区、自适应首页卡片、更清晰的表格、搜索输入合并处理，以及 `Ctrl+F`、`Alt+1`–`Alt+6`、`F5` 快捷操作。1.4.1 还修复了大目录达到扫描上限后同级项目消失的问题，新增主目录入口与按需继续分析。本文截图展示 1.4 系列界面。详见[使用说明](docs/usage.md)与[验证记录](docs/validation.md)。
+**1.5 新功能：** 空间分析将目录名称、实际占用进度条、大小与占比合并到同一棵目录树，展开文件夹即可对比子项。占比以直属父目录为分母，搜索后不重新归一化；统计不完整时保留状态提示。继续支持 1.4 引入的浅色工作区与 `Ctrl+F`、`Alt+1`–`Alt+6`、`F5` 快捷操作。详见[分析工具指南](docs/analysis-tools.md)与[验证记录](docs/validation.md)。
 
 ## 为什么选择磁盘透镜
 
@@ -39,7 +39,7 @@
 | **已安装软件** | 识别 DEB、Snap、Flatpak；切换桌面应用与全部软件包，搜索名称、包名和描述，按体积排序。 |
 | **卸载预览** | 确认前查看卸载范围与 APT 依赖变化，需要权限时由系统授权窗口确认。 |
 | **大文件** | 后台扫描指定目录，选择大小阈值，查看最大的 500 个文件，复制路径或打开所在文件夹。 |
-| **目录空间分析** | 按实际占用排序的目录树与可点击比例图，逐层进入、返回，区分逻辑大小与实际分配空间。 |
+| **目录空间分析** | 展开按实际占用排序的目录树，逐行查看占用进度条、大小及相对父目录的占比，区分逻辑大小与实际分配空间。 |
 | **重复文件** | 显式启动大小筛选、采样和完整 SHA-256 校验，查看相同内容分组并导出报告，不自动删除文件。 |
 | **开发环境** | 识别 colcon 产物、ROS 录制、点云、pip/npm/ccache 缓存及 Conda 环境，说明识别依据和可重建性。 |
 | **软件空间画像** | 从已安装软件关联已知 DEB 数据目录及 Snap/Flatpak 用户目录，分别查看包记录体积与用户数据。 |
@@ -61,9 +61,9 @@
 
 | Ubuntu | x86-64 / Intel 与 AMD（`amd64`） | ARM64 / AArch64（`arm64`） |
 | --- | --- | --- |
-| 22.04 | `disklens_1.4.1_ubuntu22.04_amd64.deb` | `disklens_1.4.1_ubuntu22.04_arm64.deb` |
-| 24.04 | `disklens_1.4.1_ubuntu24.04_amd64.deb` | `disklens_1.4.1_ubuntu24.04_arm64.deb` |
-| 26.04 | `disklens_1.4.1_ubuntu26.04_amd64.deb` | `disklens_1.4.1_ubuntu26.04_arm64.deb` |
+| 22.04 | `disklens_1.5.0_ubuntu22.04_amd64.deb` | `disklens_1.5.0_ubuntu22.04_arm64.deb` |
+| 24.04 | `disklens_1.5.0_ubuntu24.04_amd64.deb` | `disklens_1.5.0_ubuntu24.04_arm64.deb` |
+| 26.04 | `disklens_1.5.0_ubuntu26.04_amd64.deb` | `disklens_1.5.0_ubuntu26.04_arm64.deb` |
 
 请同时匹配 **Ubuntu 版本与 CPU 架构**。`x86_64` 在 Debian 包中称为 `amd64`，`aarch64` 对应 `arm64`。不提供 32 位 x86 / ARM 安装包，其他 Linux 发行版不在预编译包支持矩阵内。
 
@@ -79,7 +79,7 @@ dpkg --print-architecture
 
 ```bash
 cd ~/Downloads
-sudo apt install ./disklens_1.4.1_ubuntu24.04_amd64.deb
+sudo apt install ./disklens_1.5.0_ubuntu24.04_amd64.deb
 disklens
 ```
 

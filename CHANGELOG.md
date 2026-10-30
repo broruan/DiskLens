@@ -1,5 +1,21 @@
 # Changelog / 更新记录
 
+## 1.5.0 — 2026-10-30
+
+### English
+
+- Combine the directory hierarchy and allocation chart into one full-width tree. Each measured entry shows an allocated-space bar and size beside its name, including children revealed by expanding a directory.
+- Show each entry's share of its immediate parent's allocated bytes. Filtering does not renormalize percentages; directory metadata can make visible child percentages sum to less than 100%.
+- Remove the separate eight-entry chart limit. Keep lazy directory expansion, double-click navigation, parent/root controls and CSV export in the unified view.
+- Retain pending, partial and excluded-entry states. Incomplete measurements do not display an exact percentage.
+
+### 简体中文
+
+- 将目录层级与占用比例图合并为占满内容区的目录树，每个已统计条目直接显示实际占用进度条与大小，展开子目录后也能逐行查看。
+- 占比以各条目的直属父目录实际占用为分母，搜索后不重新归一化；目录自身元数据也占空间，因此可见子项占比不一定合计为 100%。
+- 取消独立图表的前八项限制，保留按需展开、双击进入、上一级/根目录导航与 CSV 导出。
+- 继续区分待统计、部分结果与排除项；统计不完整时不显示精确占比。
+
 ## 1.4.1 — 2026-10-30
 
 ### English
