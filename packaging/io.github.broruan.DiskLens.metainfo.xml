@@ -25,6 +25,12 @@
   <content_rating type="oars-1.1"/>
   <languages><lang percentage="100">en</lang><lang percentage="100">zh_CN</lang></languages>
   <releases>
+    <release version="1.4.1" date="2026-10-30">
+      <description>
+        <p>Keep sibling entries visible in bounded space analysis, show pending measurements, and add Home folder and parent-scope navigation.</p>
+        <p xml:lang="zh-CN">修复空间分析遗漏同级项目，显示待统计状态，新增主目录入口与跨范围上一级导航。</p>
+      </description>
+    </release>
     <release version="1.4.0" date="2026-10-29">
       <description>
         <p>Refreshed workspace, responsive overview cards, clearer large-font tables, coalesced search, icon caching, pixel scrolling and keyboard navigation.</p>

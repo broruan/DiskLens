@@ -39,6 +39,37 @@ class SpaceAnalyzerTest : public QObject {
     }
 
 private slots:
+    void directoryBudgetKeepsSiblingEntriesVisible()
+    {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const QStringList directories{QStringLiteral("Documents"),QStringLiteral("Downloads"),QStringLiteral("Desktop")};
+        for (const QString &name : directories) {
+            QVERIFY(QDir(temporary.path()).mkdir(name));
+            for (int i=0;i<10;++i)
+                QVERIFY(writeFile(temporary.filePath(name+QStringLiteral("/file-%1").arg(i)),QByteArray(1,'x')));
+        }
+        QVERIFY(writeFile(temporary.filePath(QStringLiteral("notes.txt")),QByteArray(8,'n')));
+        const auto result=analyzeDirectory(temporary.path(),nullptr,{},6);
+        QVERIFY2(result.error.isEmpty(),qPrintable(result.error));
+        QVERIFY(result.truncated);
+        // A large first directory must not make its siblings disappear.
+        QCOMPARE(result.root.children.size(),4);
+        QVERIFY(result.root.childrenComplete);
+        QCOMPARE(result.root.state,SpaceNodeState::Partial);
+        int pending=0;
+        for (const auto &child : result.root.children) if(child.state==SpaceNodeState::Pending) {
+            ++pending;
+            QVERIFY(!child.childrenComplete);
+            const auto focused=analyzeDirectory(child.path);
+            QVERIFY(!focused.truncated);
+            QCOMPARE(focused.root.children.size(),10);
+        }
+        QVERIFY(pending>0);
+        for (const QString &name : directories) QVERIFY(childNamed(result.root,name));
+        QVERIFY(childNamed(result.root,QStringLiteral("notes.txt")));
+    }
+
     void directoryAggregationHiddenSparseAndHardLinks()
     {
         QTemporaryDir temporary;
@@ -75,11 +106,13 @@ private slots:
         QCOMPARE(sparseNode->allocatedBytes, blocks(sparsePath));
         QVERIFY(sparseNode->allocatedBytes < sparseNode->logicalBytes);
         QVERIFY(childNamed(result.root, QStringLiteral(".hidden")));
+        QVERIFY(childNamed(result.root,QStringLiteral("alias")));
+        QVERIFY(childNamed(*nested,QStringLiteral("original")));
         for (int i = 1; i < result.root.children.size(); ++i)
             QVERIFY(result.root.children.at(i - 1).allocatedBytes >= result.root.children.at(i).allocatedBytes);
     }
 
-    void ignoresLinksSpecialFilesAndRejectsSymlinkAncestors()
+    void showsExcludedEntriesWithoutTraversingAndRejectsSymlinkAncestors()
     {
         QTemporaryDir temporary;
         QTemporaryDir outside;
@@ -93,7 +126,11 @@ private slots:
         const auto result = analyzeDirectory(temporary.path());
         QVERIFY(result.error.isEmpty());
         QCOMPARE(result.scannedFiles, quint64(0));
-        QVERIFY(result.root.children.isEmpty());
+        QCOMPARE(result.root.children.size(),2);
+        QCOMPARE(childNamed(result.root,QStringLiteral("link"))->state,SpaceNodeState::Symlink);
+        QCOMPARE(childNamed(result.root,QStringLiteral("fifo"))->state,SpaceNodeState::Special);
+        QCOMPARE(result.root.logicalBytes,quint64(0));
+        QCOMPARE(result.root.allocatedBytes,blocks(temporary.path()));
         QVERIFY(!analyzeDirectory(link).error.isEmpty());
         QVERIFY(!analyzeDirectory(link + QStringLiteral("/sub")).error.isEmpty());
         QVERIFY(!findDuplicates(link, 1).error.isEmpty());

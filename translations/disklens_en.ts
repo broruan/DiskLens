@@ -498,6 +498,11 @@ Allocated size: %2
       <translation>Critical components cannot be uninstalled to protect the system: %1</translation>
     </message>
     <message>
+      <location filename="../src/explorerpage.cpp" />
+      <source>主目录</source>
+      <translation>Home folder</translation>
+    </message>
+    <message>
       <location filename="../src/mainwindow.cpp" />
       <source>了解空间去向，让每一份存储都有迹可循。</source>
       <translation>See where your space goes and trace what uses it.</translation>
@@ -646,6 +651,11 @@ Allocated size: %2
       <location filename="../src/packagebackend.cpp" />
       <source>其他 Snap 软件依赖的系统运行环境</source>
       <translation>System runtime required by other Snap apps</translation>
+    </message>
+    <message>
+      <location filename="../src/explorerpage.cpp" />
+      <source>其他文件系统</source>
+      <translation>Other filesystem</translation>
     </message>
     <message>
       <location filename="../src/cachebackend.cpp" />
@@ -1038,6 +1048,11 @@ Snap does not provide an uninstall transaction simulation, so dependencies canno
       <translation>Workspace</translation>
     </message>
     <message>
+      <location filename="../src/explorerpage.cpp" />
+      <source>已优先列出同级项目。待统计目录可双击继续分析；“≥”表示已统计部分，不是完整占用。</source>
+      <translation>Sibling entries are listed first. Double-click pending folders to continue. “≥” is measured usage so far, not a complete total.</translation>
+    </message>
+    <message>
       <location filename="../src/mainwindow.cpp" />
       <source>已使用</source>
       <translation>Used</translation>
@@ -1247,6 +1262,11 @@ Snap does not provide an uninstall transaction simulation, so dependencies canno
       <location filename="../src/explorerpage.cpp" />
       <source>当前目录实际占用比例图</source>
       <translation>Allocated space chart for the current directory</translation>
+    </message>
+    <message>
+      <location filename="../src/explorerpage.cpp" />
+      <source>待统计，双击继续</source>
+      <translation>Pending; double-click to scan</translation>
     </message>
     <message>
       <location filename="../src/mainwindow.cpp" />
@@ -1679,6 +1699,11 @@ Canceling cleanup only stops further deletion. Files already deleted cannot be r
       <location filename="../src/developerbackend.cpp" />
       <source>无法确认挂载边界，请检查 /proc 是否可访问。</source>
       <translation>Cannot identify mount boundaries. Check that /proc is accessible.</translation>
+    </message>
+    <message>
+      <location filename="../src/explorerpage.cpp" />
+      <source>无法读取</source>
+      <translation>Unreadable</translation>
     </message>
     <message>
       <location filename="../src/uninstallcontroller.cpp" />
@@ -2174,6 +2199,11 @@ Try another directory or file size threshold.</translation>
       <translation>Version</translation>
     </message>
     <message>
+      <location filename="../src/explorerpage.cpp" />
+      <source>特殊文件，不统计</source>
+      <translation>Special file; not counted</translation>
+    </message>
+    <message>
       <location filename="../src/cachepage.cpp" />
       <source>用户日志</source>
       <translation>User logs</translation>
@@ -2240,6 +2270,11 @@ Try another directory or file size threshold.</translation>
       <location filename="../src/mainwindow.cpp" />
       <source>看懂开发环境占用</source>
       <translation>Understand developer storage</translation>
+    </message>
+    <message>
+      <location filename="../src/explorerpage.cpp" />
+      <source>硬链接，已在其他路径计数</source>
+      <translation>Hard link; counted elsewhere</translation>
     </message>
     <message>
       <location filename="../src/mainwindow.cpp" />
@@ -2320,6 +2355,11 @@ Try another directory or file size threshold.</translation>
       <location filename="../src/mainwindow.cpp" />
       <source>空间画像</source>
       <translation>Storage profile</translation>
+    </message>
+    <message>
+      <location filename="../src/explorerpage.cpp" />
+      <source>符号链接，不跟随</source>
+      <translation>Symbolic link; not followed</translation>
     </message>
     <message>
       <location filename="../src/mainwindow.cpp" />
@@ -2741,6 +2781,11 @@ Suggested action: %4%5</translation>
       <location filename="../src/appstoragedialog.cpp" />
       <source>部分结果，请核对跳过项</source>
       <translation>Partial results; check skipped items</translation>
+    </message>
+    <message>
+      <location filename="../src/explorerpage.cpp" />
+      <source>部分统计</source>
+      <translation>Partial measurement</translation>
     </message>
     <message>
       <location filename="../src/mainwindow.cpp" />

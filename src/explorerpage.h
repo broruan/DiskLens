@@ -93,6 +93,7 @@ private:
     QLabel *m_detail = nullptr;
     QProgressBar *m_progress = nullptr;
     QPushButton *m_choose = nullptr;
+    QPushButton *m_userHome = nullptr;
     QPushButton *m_scan = nullptr;
     QPushButton *m_cancelButton = nullptr;
     QPushButton *m_up = nullptr;

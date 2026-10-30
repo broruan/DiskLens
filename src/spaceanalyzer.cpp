@@ -220,28 +220,42 @@ int openChildDirectory(int parent, const char *name, const struct stat &expected
     return descriptor;
 }
 
+struct PendingDirectory {
+    int index;
+    QByteArray name;
+    struct stat information;
+};
+
 struct Frame {
     Directory directory;
     QString path;
     QByteArray relative;
     SpaceNode *node = nullptr;
+    bool listed = false;
+    std::vector<PendingDirectory> pending{};
+    size_t nextDirectory = 0;
 };
 
 void finishNode(std::vector<Frame> &frames)
 {
     SpaceNode *node = frames.back().node;
     if (node) {
+        node->state = node->childrenComplete ? SpaceNodeState::Complete : SpaceNodeState::Partial;
+        // Each node starts with only its own directory blocks. Sum children
+        // once here, including metadata for directories left pending by limits.
+        for (const auto &child : node->children) {
+            node->logicalBytes += child.logicalBytes;
+            node->allocatedBytes += child.allocatedBytes;
+            node->fileCount += child.fileCount;
+            if (child.state == SpaceNodeState::Pending || child.state == SpaceNodeState::Partial
+                || child.state == SpaceNodeState::OtherMount || child.state == SpaceNodeState::Unreadable)
+                node->state = SpaceNodeState::Partial;
+        }
         std::sort(node->children.begin(), node->children.end(),
                   [](const SpaceNode &left, const SpaceNode &right) {
             return left.allocatedBytes != right.allocatedBytes
                 ? left.allocatedBytes > right.allocatedBytes : left.path < right.path;
         });
-        if (frames.size() > 1) {
-            SpaceNode *parent = frames[frames.size() - 2].node;
-            parent->logicalBytes += node->logicalBytes;
-            parent->allocatedBytes += node->allocatedBytes;
-            parent->fileCount += node->fileCount;
-        }
     }
     frames.pop_back();
 }
@@ -348,10 +362,13 @@ DirectoryScanResult analyzeDirectory(const QString &requested, std::atomic_bool 
     result.root.path = root.path;
     result.root.name = root.path == QStringLiteral("/") ? root.path : QDir(root.path).dirName();
     result.root.directory = true;
+    result.root.childrenComplete = false;
+    result.root.state = SpaceNodeState::Pending;
     result.root.allocatedBytes = allocatedSize(root.information);
     Directory directory = directoryFromDescriptor(::dup(root.descriptor.value));
     if (!directory) {
         result.error = dlTr("无法读取文件夹内容：%1").arg(systemError(errno));
+        result.root.state = SpaceNodeState::Unreadable;
         return result;
     }
     std::vector<Frame> frames;
@@ -366,12 +383,42 @@ DirectoryScanResult analyzeDirectory(const QString &requested, std::atomic_bool 
             break;
         }
         Frame &current = frames.back();
+        if (current.listed) {
+            if (current.nextDirectory >= current.pending.size()) {
+                finishNode(frames);
+                continue;
+            }
+            if (nodes >= maxNodes) {
+                result.truncated = true;
+                finishNode(frames);
+                continue;
+            }
+            const PendingDirectory pending = current.pending[current.nextDirectory++];
+            SpaceNode *childNode = &current.node->children[pending.index];
+            const int child = openChildDirectory(::dirfd(current.directory.get()),
+                pending.name.constData(), pending.information, root);
+            if (child < 0) {
+                childNode->state = SpaceNodeState::Unreadable;
+                ++result.skippedEntries;
+                continue;
+            }
+            Directory childDirectory = directoryFromDescriptor(child);
+            if (!childDirectory) {
+                childNode->state = SpaceNodeState::Unreadable;
+                ++result.skippedEntries;
+                continue;
+            }
+            // No more siblings are appended to the parent while this pointer
+            // is live. Descendants are opened relative to pinned descriptors.
+            frames.push_back({std::move(childDirectory), childNode->path, {}, childNode});
+            continue;
+        }
         errno = 0;
         const dirent *entry = ::readdir(current.directory.get());
         if (!entry) {
-            if (errno)
-                ++result.skippedEntries;
-            finishNode(frames);
+            current.listed = true;
+            current.node->childrenComplete = errno == 0;
+            if (errno) ++result.skippedEntries;
             continue;
         }
         if (std::strcmp(entry->d_name, ".") == 0 || std::strcmp(entry->d_name, "..") == 0)
@@ -382,60 +429,51 @@ DirectoryScanResult analyzeDirectory(const QString &requested, std::atomic_bool 
             result.canceled = true;
             break;
         }
-        struct stat information {};
-        const int parent = ::dirfd(current.directory.get());
-        if (::fstatat(parent, entry->d_name, &information, AT_SYMLINK_NOFOLLOW) != 0) {
-            ++result.skippedEntries;
-            continue;
-        }
-        if (!S_ISREG(information.st_mode) && !S_ISDIR(information.st_mode))
-            continue;
-        if (!root.allowed(parent, entry->d_name, path, information)) {
-            ++result.skippedEntries;
-            continue;
-        }
-        if (S_ISREG(information.st_mode)
-            && !hardLinks.insert({information.st_dev, information.st_ino}).second)
-            continue;
         if (nodes >= maxNodes) {
             result.truncated = true;
-            break;
-        }
-        if (S_ISDIR(information.st_mode) && frames.size() >= MaximumDepth) {
-            ++result.skippedEntries;
-            result.truncated = true;
+            current.listed = true;
             continue;
         }
         SpaceNode node;
         node.name = QFile::decodeName(entry->d_name);
         node.path = path;
-        node.directory = S_ISDIR(information.st_mode);
-        node.allocatedBytes = allocatedSize(information);
-        if (node.directory) {
-            const int child = openChildDirectory(parent, entry->d_name, information, root);
-            if (child < 0) {
-                ++result.skippedEntries;
-                continue;
-            }
-            Directory childDirectory = directoryFromDescriptor(child);
-            if (!childDirectory) {
-                ++result.skippedEntries;
-                continue;
-            }
-            current.node->children.append(std::move(node));
-            SpaceNode *childNode = &current.node->children.last();
-            ++nodes;
-            frames.push_back({std::move(childDirectory), path, {}, childNode});
+        struct stat information {};
+        const int parent = ::dirfd(current.directory.get());
+        if (::fstatat(parent, entry->d_name, &information, AT_SYMLINK_NOFOLLOW) != 0) {
+            node.directory = entry->d_type == DT_DIR;
+            node.childrenComplete = !node.directory;
+            node.state = SpaceNodeState::Unreadable;
+            ++result.skippedEntries;
+        } else if (S_ISLNK(information.st_mode)) {
+            node.state = SpaceNodeState::Symlink;
+        } else if (!S_ISREG(information.st_mode) && !S_ISDIR(information.st_mode)) {
+            node.state = SpaceNodeState::Special;
         } else {
-            node.logicalBytes = logicalSize(information);
-            node.fileCount = 1;
-            current.node->logicalBytes += node.logicalBytes;
-            current.node->allocatedBytes += node.allocatedBytes;
-            ++current.node->fileCount;
-            current.node->children.append(std::move(node));
-            ++nodes;
-            ++result.scannedFiles;
+            node.directory = S_ISDIR(information.st_mode);
+            node.childrenComplete = !node.directory;
+            if (!root.allowed(parent, entry->d_name, path, information)) {
+                node.state = SpaceNodeState::OtherMount;
+                ++result.skippedEntries;
+            } else if (node.directory) {
+                node.allocatedBytes = allocatedSize(information);
+                node.state = SpaceNodeState::Pending;
+                if (frames.size() >= MaximumDepth) {
+                    ++result.skippedEntries;
+                    result.truncated = true;
+                } else {
+                    current.pending.push_back({int(current.node->children.size()), QByteArray(entry->d_name), information});
+                }
+            } else if (!hardLinks.insert({information.st_dev, information.st_ino}).second) {
+                node.state = SpaceNodeState::HardLink;
+            } else {
+                node.logicalBytes = logicalSize(information);
+                node.allocatedBytes = allocatedSize(information);
+                node.fileCount = 1;
+                ++result.scannedFiles;
+            }
         }
+        current.node->children.append(std::move(node));
+        ++nodes;
     }
     while (!frames.empty())
         finishNode(frames);

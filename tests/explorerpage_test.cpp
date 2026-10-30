@@ -74,6 +74,8 @@ private slots:
     void duplicateScanIsExplicitAndFiltered();
     void reportEscapingAndPartialResults();
     void cancelAndWorkerLifetime();
+    void parentScopeClearsFilterAndShowsAllSiblings();
+    void openingPendingDirectoryStartsFocusedScan();
 };
 
 void ExplorerPageTest::directoryNavigationAndChart()
@@ -82,7 +84,8 @@ void ExplorerPageTest::directoryNavigationAndChart()
     ExplorerPage page; page.setRoot(temporary.path()); page.resize(1150, 760); page.show();
     QVERIFY(!page.isBusy()); page.ensureScanStarted(); QTRY_VERIFY_WITH_TIMEOUT(page.isSettled(), 10000);
     const auto c = controls(page); QVERIFY(valid(c));
-    QCOMPARE(c.tree->topLevelItemCount(), 3); QVERIFY(!c.up->isEnabled());
+    QCOMPARE(c.tree->topLevelItemCount(), 3); QVERIFY(c.up->isEnabled());
+    QVERIFY(!page.findChild<QPushButton*>("explorerHome")->isEnabled());
     QCOMPARE(c.tree->topLevelItem(0)->text(0), QStringLiteral("largest"));
     // Open the visible production row rather than invoking a private method.
     auto *largest = c.tree->topLevelItem(0); const QRect row = c.tree->visualItemRect(largest);
@@ -102,7 +105,8 @@ void ExplorerPageTest::directoryNavigationAndChart()
     QTRY_VERIFY(c.breadcrumb->text().contains(QStringLiteral("largest")));
     QCOMPARE(c.tree->topLevelItemCount(), 2); QVERIFY(c.up->isEnabled());
     QTest::mouseClick(c.up, Qt::LeftButton); QCOMPARE(c.tree->topLevelItemCount(), 3);
-    QVERIFY(!c.up->isEnabled());
+    QVERIFY(c.up->isEnabled());
+    QVERIFY(!page.findChild<QPushButton*>("explorerHome")->isEnabled());
     // The first full-width graph row represents the largest actual allocation.
     QTest::mouseClick(c.map, Qt::LeftButton, Qt::NoModifier, QPoint(c.map->width() / 2, 70));
     QTRY_VERIFY(c.breadcrumb->text().contains(QStringLiteral("largest")));
@@ -116,6 +120,64 @@ void ExplorerPageTest::directoryNavigationAndChart()
     QVERIFY(QFileInfo::exists(temporary.path() + "/largest/unique.bin"));
     const QString artifacts = QDir::current().absoluteFilePath(QStringLiteral("artifacts"));
     QVERIFY(QDir().mkpath(artifacts)); QVERIFY(page.grab().save(artifacts + "/explorer-production-ui.png"));
+}
+
+void ExplorerPageTest::parentScopeClearsFilterAndShowsAllSiblings()
+{
+    QTemporaryDir temporary; QVERIFY(temporary.isValid());
+    QVERIFY(writeFile(temporary.filePath("Documents/note.txt"),16,'n'));
+    QVERIFY(writeFile(temporary.filePath("Downloads/archive.bin"),32,'d'));
+    QVERIFY(writeFile(temporary.filePath(".hidden"),1,'h'));
+    QVERIFY(QDir(temporary.path()).mkdir("Desktop"));
+    const QByteArray target=QFile::encodeName(temporary.filePath("Documents"));
+    const QByteArray link=QFile::encodeName(temporary.filePath("document-link"));
+    QVERIFY(::symlink(target.constData(),link.constData())==0);
+    ExplorerPage page; page.setRoot(temporary.filePath("Documents")); page.show(); page.ensureScanStarted();
+    QTRY_VERIFY_WITH_TIMEOUT(page.isSettled(),10000);
+    const auto c=controls(page); QVERIFY(valid(c));
+    c.search->setText("note"); QTRY_COMPARE(c.tree->topLevelItemCount(),1);
+    QVERIFY(c.up->isEnabled());
+    QTest::mouseClick(c.up,Qt::LeftButton);
+    QTRY_VERIFY_WITH_TIMEOUT(page.isSettled(),10000);
+    QCOMPARE(page.findChild<QLineEdit*>("explorerRoot")->text(),temporary.path());
+    QCOMPARE(c.search->text(),QString());
+    QCOMPARE(c.tree->topLevelItemCount(),5);
+    QStringList names;
+    for(int i=0;i<c.tree->topLevelItemCount();++i) names<<c.tree->topLevelItem(i)->text(0);
+    for(const QString &name : {QStringLiteral("Documents"),QStringLiteral("Downloads"),QStringLiteral("Desktop"),QStringLiteral(".hidden"),QStringLiteral("document-link")})
+        QVERIFY(names.contains(name));
+    auto *item=c.tree->findItems("document-link",Qt::MatchExactly).first();
+    QVERIFY(item->text(1).contains(QStringLiteral("符号链接")));
+    QVERIFY(page.findChild<QPushButton*>("explorerUserHome"));
+}
+
+void ExplorerPageTest::openingPendingDirectoryStartsFocusedScan()
+{
+    QTemporaryDir temporary; QVERIFY(temporary.isValid());
+    QString path=temporary.path();
+    for(int i=0;i<130;++i) { path+=QStringLiteral("/d"); QVERIFY(QDir().mkdir(path)); }
+    QVERIFY(writeFile(path+QStringLiteral("/payload.bin"),64,'p'));
+    ExplorerPage page; page.setRoot(temporary.path()); page.show(); page.ensureScanStarted();
+    QTRY_VERIFY_WITH_TIMEOUT(page.isSettled(),10000);
+    const auto c=controls(page); QVERIFY(valid(c));
+    QTreeWidgetItem *pending=c.tree->topLevelItem(0); QVERIFY(pending);
+    while(!pending->text(1).contains(QStringLiteral("待统计"))) {
+        pending->setExpanded(true);
+        QCOMPARE(pending->childCount(),1);
+        pending=pending->child(0);
+    }
+    const QString focusedRoot=pending->data(0,Qt::UserRole).toString();
+    QVERIFY(QMetaObject::invokeMethod(c.tree,"itemDoubleClicked",Qt::DirectConnection,
+        Q_ARG(QTreeWidgetItem*,pending),Q_ARG(int,0)));
+    QTRY_VERIFY_WITH_TIMEOUT(page.isSettled(),10000);
+    QCOMPARE(page.findChild<QLineEdit*>("explorerRoot")->text(),focusedRoot);
+    QCOMPARE(c.tree->topLevelItemCount(),1);
+    QVERIFY(!c.tree->topLevelItem(0)->text(1).contains(QStringLiteral("待统计")));
+    QVERIFY(!c.tree->topLevelItem(0)->text(1).startsWith(QStringLiteral("≥")));
+    QCOMPARE(c.tree->topLevelItem(0)->text(3),QStringLiteral("1"));
+    QString error; QVERIFY(page.exportReport(temporary.path()+QStringLiteral("/focused.csv"),&error));
+    const auto csv=readFile(temporary.path()+QStringLiteral("/focused.csv"));
+    QVERIFY(csv.contains("payload.bin")); QVERIFY(csv.contains("\"state\",\"children_complete\""));
 }
 
 void ExplorerPageTest::duplicateScanIsExplicitAndFiltered()
@@ -205,7 +267,8 @@ void ExplorerPageTest::reportEscapingAndPartialResults()
     QCOMPARE(QDir(temporary.path()).entryList(QDir::AllEntries | QDir::Hidden | QDir::NoDotAndDotDot), beforeFailure);
     QCOMPARE(page.findChild<QLabel *>("explorerStatus")->textFormat(), Qt::PlainText);
     QCOMPARE(page.findChild<QLabel *>("explorerDetail")->textFormat(), Qt::PlainText);
-    QVERIFY(!csv.contains("\"link-to-largest\","));
+    QVERIFY(csv.contains("\"link-to-largest\","));
+    QVERIFY(csv.contains("\"symlink\",\"0\",\"0\",\"0\",\"symlink\",\"true\""));
 }
 
 void ExplorerPageTest::cancelAndWorkerLifetime()

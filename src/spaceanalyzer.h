@@ -8,12 +8,17 @@
 #include <atomic>
 #include <functional>
 
-// All scans are read-only, stay on the root mount, and reject symbolic links
-// even in the selected root's ancestors. Hard links contribute bytes once.
+// All scans are read-only and account only within the selected root mount.
+// Links and other excluded entries remain visible without being traversed or
+// counted. A selected root with symlink ancestors is still rejected.
+enum class SpaceNodeState { Complete, Pending, Partial, Symlink, OtherMount, Unreadable, Special, HardLink };
+
 struct SpaceNode {
     QString name;
     QString path;
     bool directory = false;
+    bool childrenComplete = true;
+    SpaceNodeState state = SpaceNodeState::Complete;
     quint64 logicalBytes = 0;
     quint64 allocatedBytes = 0;
     quint64 fileCount = 0;
@@ -29,7 +34,10 @@ struct DirectoryScanResult {
     QString error;
 };
 
-// maxNodes includes the root and file nodes (accepted range: 1..1,000,000).
+// maxNodes includes the root and visible entries (accepted range: 1..1,000,000).
+// Each directory's immediate entries are enumerated before descending, so a
+// large subtree cannot hide its already-enumerated siblings. Pending/partial
+// directory totals are lower bounds, not complete usage estimates.
 // Results are partial when canceled,
 // truncated, or skippedEntries is nonzero. Tree depth is bounded to 128 levels.
 DirectoryScanResult analyzeDirectory(

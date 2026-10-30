@@ -80,6 +80,50 @@ bool isWithin(const QString &path, const QString &root)
 
 QString count(quint64 value) { return QLocale().toString(value); }
 
+QString nodeStateCode(const SpaceNode &node)
+{
+    switch (node.state) {
+    case SpaceNodeState::Complete: return QStringLiteral("complete");
+    case SpaceNodeState::Pending: return QStringLiteral("pending");
+    case SpaceNodeState::Partial: return QStringLiteral("partial");
+    case SpaceNodeState::Symlink: return QStringLiteral("symlink");
+    case SpaceNodeState::OtherMount: return QStringLiteral("other_mount");
+    case SpaceNodeState::Unreadable: return QStringLiteral("unreadable");
+    case SpaceNodeState::Special: return QStringLiteral("special");
+    case SpaceNodeState::HardLink: return QStringLiteral("hard_link");
+    }
+    return {};
+}
+
+QString nodeStateText(const SpaceNode &node)
+{
+    switch (node.state) {
+    case SpaceNodeState::Pending: return dlTr("待统计，双击继续");
+    case SpaceNodeState::Partial: return dlTr("部分统计");
+    case SpaceNodeState::Symlink: return dlTr("符号链接，不跟随");
+    case SpaceNodeState::OtherMount: return dlTr("其他文件系统");
+    case SpaceNodeState::Unreadable: return dlTr("无法读取");
+    case SpaceNodeState::Special: return dlTr("特殊文件，不统计");
+    case SpaceNodeState::HardLink: return dlTr("硬链接，已在其他路径计数");
+    case SpaceNodeState::Complete: return {};
+    }
+    return {};
+}
+
+QString nodeBytes(const SpaceNode &node, quint64 bytes)
+{
+    if (node.state == SpaceNodeState::Partial) return QStringLiteral("≥ ")+formatBytes(bytes);
+    if (node.state != SpaceNodeState::Complete) return nodeStateText(node);
+    return formatBytes(bytes);
+}
+
+QString nodeFileCount(const SpaceNode &node)
+{
+    if (node.state == SpaceNodeState::Partial) return QStringLiteral("≥ ")+count(node.fileCount);
+    if (node.state != SpaceNodeState::Complete) return QStringLiteral("—");
+    return count(node.fileCount);
+}
+
 QString singleLine(QString value)
 {
     value.replace(QLatin1Char('\n'), QStringLiteral("↵"));
@@ -278,7 +322,9 @@ protected:
             const QRect row = rowRect(i); const auto *item = m_items[i];
             if (i == m_focus && hasFocus()) painter.fillRect(row, QColor("#edf2ff"));
             const double fraction = m_total ? qBound(0.0, double(item->allocatedBytes) / double(m_total), 1.0) : 0;
-            const QString suffix = QStringLiteral("%1 · %2%").arg(formatBytes(item->allocatedBytes)).arg(fraction * 100, 0, 'f', 1);
+            const QString suffix = item->state == SpaceNodeState::Complete
+                ? QStringLiteral("%1 · %2%").arg(formatBytes(item->allocatedBytes)).arg(fraction * 100, 0, 'f', 1)
+                : nodeBytes(*item,item->allocatedBytes);
             const int valueWidth = painter.fontMetrics().horizontalAdvance(suffix);
             const QRect text(row.left()+6, row.top()+2, row.width()-12, fontMetrics().height());
             const int labelWidth = qMax(24, text.width()-valueWidth-12);
@@ -322,7 +368,7 @@ protected:
         for (int i = 0; i < m_items.size(); ++i) if (rowRect(i).contains(event->pos())) {
             const auto *node = m_items[i];
             setToolTip(node->path + dlTr("\n逻辑大小：%1\n实际占用：%2\n%3")
-                .arg(formatBytes(node->logicalBytes), formatBytes(node->allocatedBytes),
+                .arg(nodeBytes(*node,node->logicalBytes), nodeBytes(*node,node->allocatedBytes),
                      node->directory ? dlTr("点击进入目录") : dlTr("点击在列表中选择文件")));
             over = true; break;
         }
@@ -393,16 +439,19 @@ void ExplorerPage::createUi()
 {
     auto *layout = new QVBoxLayout(this); layout->setContentsMargins(0, 0, 0, 0); layout->setSpacing(12);
     auto *scopeRow = new QHBoxLayout;
+    m_userHome = button(dlTr("主目录"), "explorerUserHome", "folder");
+    m_userHome->setToolTip(QDir::homePath());
     m_rootEdit = new QLineEdit; m_rootEdit->setObjectName(QStringLiteral("explorerRoot"));
     m_rootEdit->setPlaceholderText(dlTr("选择要分析的目录，如主目录或外置磁盘中的目录"));
     m_choose = button(dlTr("选择目录"), "explorerChoose", "folder");
     m_scan = button(dlTr("扫描目录"), "explorerScan", "refresh");
     m_cancelButton = button(dlTr("取消"), "explorerCancel", "stop");
-    scopeRow->addWidget(m_rootEdit, 1); scopeRow->addWidget(m_choose); scopeRow->addWidget(m_scan); scopeRow->addWidget(m_cancelButton);
+    scopeRow->addWidget(m_userHome); scopeRow->addWidget(m_rootEdit, 1); scopeRow->addWidget(m_choose); scopeRow->addWidget(m_scan); scopeRow->addWidget(m_cancelButton);
     layout->addLayout(scopeRow);
 
     auto *filterRow = new QHBoxLayout;
     m_search = new QLineEdit; m_search->setObjectName(QStringLiteral("explorerSearch"));
+    m_search->setClearButtonEnabled(true);
     m_search->setPlaceholderText(dlTr("筛选名称或完整路径（不影响导出范围）"));
     m_export = button(dlTr("导出 CSV"), "explorerExport", "files");
     m_export->setToolTip(dlTr("导出当前目录及子目录，或全部重复分组；包含搜索筛选外的结果。"));
@@ -471,6 +520,12 @@ void ExplorerPage::createUi()
         const QString root = QFileDialog::getExistingDirectory(this, dlTr("选择分析目录"), m_rootEdit->text());
         if (!root.isEmpty()) { setRoot(root); if (!m_started) ensureScanStarted(); }
     });
+    connect(m_userHome, &QPushButton::clicked, this, [this] {
+        m_search->clear();
+        setRoot(QDir::homePath());
+        ensureScanStarted();
+        if (m_directoryDone) showDirectory(m_directoryResult.root.path);
+    });
     connect(m_scan, &QPushButton::clicked, this, &ExplorerPage::rescan);
     connect(m_rootEdit, &QLineEdit::returnPressed, this, &ExplorerPage::rescan);
     connect(m_cancelButton, &QPushButton::clicked, this, &ExplorerPage::cancelWork);
@@ -530,6 +585,7 @@ void ExplorerPage::setRoot(const QString &root)
     m_duplicatesRequested = false;
     m_directoryResult = {}; m_duplicateResult = {};
     m_map->setNode(nullptr, {}); m_tree->clear(); m_duplicateTree->clear();
+    m_search->clear();
     m_metrics->setText(dlTr("尚未扫描")); m_breadcrumb->setText(dlTr("扫描根目录：") + m_root);
     m_breadcrumb->setToolTip(m_root); m_duplicateSummary->setText(dlTr("尚未查找重复文件"));
     m_status->setText(dlTr("所选目录：") + m_root); updateControls(); updateSelection();
@@ -625,6 +681,8 @@ void ExplorerPage::directoryFinished()
     m_status->setText(completion(m_directoryResult.canceled, m_directoryResult.truncated, m_directoryResult.skippedEntries, m_directoryResult.error));
     m_directoryNotice->setText(dlTr("%1逻辑大小是文件长度；实际占用含目录元数据，硬链接只计一次。")
         .arg(partial(m_directoryResult) ? dlTr("部分结果。") : QString()));
+    if (m_directoryResult.truncated)
+        m_directoryNotice->setText(dlTr("已优先列出同级项目。待统计目录可双击继续分析；“≥”表示已统计部分，不是完整占用。"));
     if (m_directoryResult.root.directory) showDirectory(m_directoryResult.root.path);
     else {
         m_currentPath = m_root;
@@ -680,12 +738,15 @@ void ExplorerPage::addChildren(QTreeWidgetItem *parent, const SpaceNode &node)
         if (!matches(*child, search)) continue;
         auto *item = new QTreeWidgetItem;
         item->setFlags(item->flags() & ~Qt::ItemIsUserCheckable);
-        item->setText(0, singleLine(child->name)); item->setText(1, formatBytes(child->allocatedBytes));
-        item->setText(2, formatBytes(child->logicalBytes)); item->setText(3, count(child->fileCount));
+        item->setText(0, singleLine(child->name)); item->setText(1, nodeBytes(*child,child->allocatedBytes));
+        const bool measured = child->state == SpaceNodeState::Complete || child->state == SpaceNodeState::Partial;
+        item->setText(2, measured ? nodeBytes(*child,child->logicalBytes) : QStringLiteral("—"));
+        item->setText(3, nodeFileCount(*child));
         item->setData(0, pathRole, child->path); item->setData(0, directoryRole, child->directory);
         item->setData(0, populatedRole, false); item->setIcon(0, lineIcon(child->directory ? "folder" : "files"));
         for (int column = 0; column < 4; ++column) item->setToolTip(column, child->path
-            + dlTr("\n实际占用：%1\n逻辑大小：%2\n文件数：%3").arg(formatBytes(child->allocatedBytes), formatBytes(child->logicalBytes), count(child->fileCount)));
+            + dlTr("\n实际占用：%1\n逻辑大小：%2\n文件数：%3").arg(item->text(1),item->text(2),item->text(3))
+            + (nodeStateText(*child).isEmpty() ? QString() : QStringLiteral("\n")+nodeStateText(*child)));
         for (int column = 1; column < 4; ++column) item->setTextAlignment(column, Qt::AlignRight | Qt::AlignVCenter);
         if (parent) parent->addChild(item); else m_tree->addTopLevelItem(item);
         if (child->directory && !child->children.isEmpty()) item->setChildIndicatorPolicy(QTreeWidgetItem::ShowIndicator);
@@ -695,6 +756,14 @@ void ExplorerPage::addChildren(QTreeWidgetItem *parent, const SpaceNode &node)
 void ExplorerPage::showDirectory(const QString &path)
 {
     const auto *node = findNode(path); if (!node || !node->directory) return;
+    if (!node->childrenComplete && node->path != m_directoryResult.root.path && !isBusy()) {
+        // The bounded snapshot retains unvisited sibling directories. Opening
+        // one gives it a fresh budget instead of presenting an empty folder.
+        const QString scope = node->path;
+        m_search->clear();
+        setRoot(scope);
+        return;
+    }
     m_currentPath = node->path;
     m_tree->clear(); addChildren(nullptr, *node); m_map->setNode(node, m_search->text().trimmed());
     QString relative = QDir(m_directoryResult.root.path).relativeFilePath(node->path);
@@ -702,15 +771,19 @@ void ExplorerPage::showDirectory(const QString &path)
         : dlTr("当前层：") + relative.replace(QLatin1Char('/'), QStringLiteral(" / ")));
     m_breadcrumb->setToolTip(node->path);
     m_metrics->setText(dlTr("实际占用 %1   ·   逻辑大小 %2   ·   %3 个文件   ·   当前层 %4 项%5")
-        .arg(formatBytes(node->allocatedBytes), formatBytes(node->logicalBytes), count(node->fileCount), count(node->children.size()),
+        .arg(nodeBytes(*node,node->allocatedBytes), nodeBytes(*node,node->logicalBytes), nodeFileCount(*node), count(node->children.size()),
              partial(m_directoryResult) ? dlTr("   ·   部分结果") : QString()));
     updateControls(); updateSelection();
 }
 
 void ExplorerPage::navigateUp()
 {
-    if (m_currentPath.isEmpty() || m_currentPath == m_directoryResult.root.path) return;
-    showDirectory(QFileInfo(m_currentPath).absolutePath());
+    if (m_currentPath.isEmpty() || m_currentPath == QStringLiteral("/")) return;
+    const QString parent = QFileInfo(m_currentPath).absolutePath();
+    if (m_currentPath == m_directoryResult.root.path) {
+        m_search->clear();
+        setRoot(parent);
+    } else showDirectory(parent);
 }
 
 void ExplorerPage::rebuildDuplicates()
@@ -760,9 +833,10 @@ void ExplorerPage::updateSelection()
 void ExplorerPage::updateControls()
 {
     m_choose->setEnabled(!m_busy); m_rootEdit->setEnabled(!m_busy); m_scan->setEnabled(!m_busy);
+    m_userHome->setEnabled(!m_busy);
     m_cancelButton->setEnabled(m_busy && !m_cancel.load()); m_duplicateScan->setEnabled(!m_busy); m_minimum->setEnabled(!m_busy);
-    m_up->setEnabled(!m_currentPath.isEmpty() && m_currentPath != m_directoryResult.root.path);
-    m_home->setEnabled(m_up->isEnabled());
+    m_up->setEnabled(!m_busy && !m_currentPath.isEmpty() && m_currentPath != QStringLiteral("/"));
+    m_home->setEnabled(!m_busy && !m_currentPath.isEmpty() && m_currentPath != m_directoryResult.root.path);
     m_export->setEnabled(!m_busy && (m_tabs->currentIndex() == 0 ? m_directoryDone : m_duplicatesDone));
     m_progress->setRange(0, m_busy ? 0 : 1); m_progress->setValue(m_busy ? 0 : 1);
 }
@@ -832,12 +906,16 @@ bool ExplorerPage::exportReport(const QString &path, QString *error) const
         appendCsv(output, {QStringLiteral("skipped_entries"), QString::number(m_directoryResult.skippedEntries)});
         appendCsv(output, {QStringLiteral("scanned_files"), QString::number(m_directoryResult.scannedFiles)});
         appendCsv(output, {QStringLiteral("error"), m_directoryResult.error});
-        appendCsv(output, {QStringLiteral("name"), QStringLiteral("path"), QStringLiteral("type"), QStringLiteral("logical_bytes"), QStringLiteral("allocated_bytes"), QStringLiteral("file_count")});
+        appendCsv(output, {QStringLiteral("name"), QStringLiteral("path"), QStringLiteral("type"), QStringLiteral("logical_bytes"), QStringLiteral("allocated_bytes"), QStringLiteral("file_count"), QStringLiteral("state"), QStringLiteral("children_complete")});
         const auto *current = findNode(m_currentPath);
         if (current) {
             std::function<void(const SpaceNode &)> writeNode = [&](const SpaceNode &node) {
-                appendCsv(output, {node.name, node.path, node.directory ? QStringLiteral("directory") : QStringLiteral("file"),
-                    QString::number(node.logicalBytes), QString::number(node.allocatedBytes), QString::number(node.fileCount)});
+                const QString type = node.state == SpaceNodeState::Symlink ? QStringLiteral("symlink")
+                    : node.state == SpaceNodeState::Special ? QStringLiteral("special")
+                    : node.directory ? QStringLiteral("directory") : QStringLiteral("file");
+                appendCsv(output, {node.name, node.path, type,
+                    QString::number(node.logicalBytes), QString::number(node.allocatedBytes), QString::number(node.fileCount),
+                    nodeStateCode(node), node.childrenComplete ? QStringLiteral("true") : QStringLiteral("false")});
                 for (const auto &child : node.children) writeNode(child);
             };
             writeNode(*current);

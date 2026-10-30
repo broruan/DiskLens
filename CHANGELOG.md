@@ -1,5 +1,23 @@
 # Changelog / 更新记录
 
+## 1.4.1 — 2026-10-30
+
+### English
+
+- Enumerate sibling entries before descending so a large subtree cannot hide folders already listed at the same level when the scan budget is reached.
+- Keep hidden entries, empty folders, symbolic links, special files and hard-link aliases visible, with explicit measurement states. Links remain unfollowed and hard links are counted once.
+- Open pending/incompletely listed folders with a fresh scan budget. Add a Home folder shortcut and allow Parent to move beyond the current scan root; changing scope clears stale search filters.
+- Mark partial usage with `≥`, and include per-entry `state` and `children_complete` fields in directory CSV reports.
+- Add regressions for sibling visibility, pending-folder navigation, parent-scope search reset and excluded-entry reporting.
+
+### 中文
+
+- 优先列出同级项目，再扫描子目录，修复大子树耗尽扫描额度后同级文件和目录消失的问题。
+- 保留隐藏项、空目录、符号链接、特殊文件和硬链接别名，并标明统计状态；不跟随符号链接，硬链接仍只计一次。
+- 双击待统计或尚未列全的目录，使用新的扫描额度继续分析；新增主目录按钮，上一级可越过当前扫描根，切换范围时清空旧搜索。
+- 部分占用使用 `≥` 标识，目录 CSV 增加逐项 `state` 和 `children_complete` 字段。
+- 增加同级项目完整显示、待统计目录导航、上一级清除搜索及排除项报告的回归检查。
+
 ## 1.4.0 — 2026-10-29
 
 ### English

@@ -1,24 +1,28 @@
 # 空间分析与开发环境指南 / Analysis tools guide
 
-适用于 DiskLens 1.2.0。新加入的「空间分析」「开发环境」和「软件空间画像」均为只读分析：可以查看、打开目录和复制路径；空间分析与开发环境还支持导出报告。这些页面不提供删除按钮，也不会执行构建、卸载或缓存清理命令。
+适用于 DiskLens 1.4.1。「空间分析」「开发环境」和「软件空间画像」均为只读分析：可以查看、打开目录和复制路径；空间分析与开发环境还支持导出报告。这些页面不提供删除按钮，也不会执行构建、卸载或缓存清理命令。
 
-For DiskLens 1.2.0. **Space Analysis**, **Developer Environment**, and **Application Storage Profile** are read-only tools. They inspect storage, open directories, and copy paths. Space Analysis and Developer Environment also export reports. These pages do not delete files or run build, uninstall, or cache-cleaning commands.
+For DiskLens 1.4.1. **Space Analysis**, **Developer Environment**, and **Application Storage Profile** are read-only tools. They inspect storage, open directories, and copy paths. Space Analysis and Developer Environment also export reports. These pages do not delete files or run build, uninstall, or cache-cleaning commands.
 
 ## 1. 从目录开始 / Start with a directory
 
-1. 打开「空间分析」，选择要检查的真实目录。进入页面会启动目录元数据统计；修改路径后点击「重新扫描」。
-2. 查看「目录空间分析」页的实际占用、逻辑大小和文件数。双击目录行，或点击右侧比例图中的目录行，即可进入下一层；用上一级或根目录按钮返回。
+1. 打开「空间分析」，默认分析主目录；也可点击「主目录」回到主目录，或选择其他真实目录。进入页面会启动目录元数据统计；修改路径后点击「重新扫描」。
+2. 查看「目录空间分析」页的实际占用、逻辑大小和文件数。双击目录行，或点击右侧比例图中的目录行，即可进入下一层；用上一级或根目录按钮返回；上一级也可越过当前扫描根，重新分析父目录。切换扫描范围时会清空搜索，避免旧筛选隐藏新目录的内容。
 3. 使用搜索定位名称或路径。比例图显示当前层匹配的前 8 项，左侧列表保留其余匹配项；细小条目也能点击整行进入。
 4. 选中条目后复制完整路径，或打开其所在目录；需要保存结果时导出当前页的 CSV。
 
-1. Open **Space Analysis** and choose a real directory. Opening the page starts a metadata scan; after editing the path, select **Rescan**.
-2. Inspect allocated bytes, logical bytes, and file counts. Double-click a directory row, or activate its row in the chart, to move down a level. Use the parent/root controls to return.
+1. Open **Space Analysis** to inspect your home folder. Use **Home folder** to return there, or choose another real directory. Opening the page starts a metadata scan; after editing the path, select **Rescan**.
+2. Inspect allocated bytes, logical bytes, and file counts. Double-click a directory row, or activate its row in the chart, to move down a level. Use the parent/root controls to return. Parent can also move beyond the scan root and analyze its parent. Changing scope clears the previous search filter.
 3. Search names or paths. The chart shows the largest eight matching children of the current directory; the table retains the remaining matches. The entire chart row is clickable, including tiny entries.
 4. Select an entry to copy its full path or open its directory. Export the active tab to CSV when a saved snapshot is useful.
 
 比例图的分母始终是**当前目录的实际占用总量**，不会将搜索后的剩余项目重新归一化为 100%。它只展示当前层前 8 项，目录自身元数据也占空间，因此可见条目的比例之和不一定等于 100%。图表支持方向键选择、Enter / Space 激活。
 
 The chart denominator is always the **current directory's total allocated bytes**. Search results are not renormalized to 100%. Only eight children are charted, and directory metadata also occupies blocks, so visible percentages need not sum to 100%. Arrow keys select chart rows; Enter or Space activates them.
+
+扫描会先列出同级项目（包括隐藏项、空目录和链接），再深入子目录。达到数量或深度上限后，已列出的兄弟目录仍保留；“待统计”表示尚未扫描，“≥”表示已统计部分。双击待统计或未列全的目录会启动该目录的新一轮扫描。若单个目录自身的条目数也超过上限，列表仍可能不完整，并显示部分结果提示。符号链接、特殊文件和其他文件系统入口可见，但不跟随或合并计量；其他文件系统目录可单独打开分析。
+
+Each directory lists its immediate entries, including hidden items, empty folders and links, before descending. Listed siblings remain visible when a count/depth limit is reached. **Pending** means unscanned; **≥** marks a measured lower bound. Opening a pending or incompletely listed directory starts a fresh scan for that directory. A single directory containing more entries than the limit can still have an incomplete listing, identified as partial. Symbolic links, special files and other-filesystem entries remain visible without being followed or included in totals; another filesystem's directory can be analyzed as a separate scope.
 
 ## 2. 正确理解大小 / Understand the metrics
 
@@ -29,9 +33,9 @@ The chart denominator is always the **current directory's total allocated bytes*
 | 文件数 / File count | 已统计的唯一普通文件 inode 数，不包含目录或硬链接的重复别名。Unique counted regular-file inodes, excluding directories and additional hard-link names. |
 | 逻辑冗余量 / Logical redundancy | 重复组内 `(文件数 − 1) × 单文件逻辑大小`。For each duplicate group, `(file count − 1) × logical bytes per file`. |
 
-同一设备与 inode 的硬链接只计首次扫描路径，其他别名不重复显示或计量。跨目录硬链接的归属取决于遍历顺序。reflink、快照或文件系统共享数据块没有按物理共享关系去重；以上数值均不能直接换算为删除后释放的空间。软件包元数据记录的安装体积也不能与用户目录统计直接相加。
+同一设备与 inode 的硬链接只计首次扫描路径，空间分析中保留其他别名但标明已在其他路径计数，不重复计量；重复文件检测仍仅使用唯一 inode。跨目录硬链接的归属取决于遍历顺序。reflink、快照或文件系统共享数据块没有按物理共享关系去重；以上数值均不能直接换算为删除后释放的空间。软件包元数据记录的安装体积也不能与用户目录统计直接相加。
 
-Hard links sharing a device and inode are represented by the first encountered path. Other names are omitted rather than counted again; attribution across directories depends on traversal order. Reflinks, snapshots, and shared filesystem extents are not deduplicated by physical extent. These figures do not promise reclaimable space. Package-manager installation estimates must not be added directly to user-directory measurements.
+Hard links sharing a device and inode are represented by the first encountered path. Space Analysis retains other names with an already-counted status; duplicate detection still uses unique inodes. Attribution across directories depends on traversal order. Reflinks, snapshots, and shared filesystem extents are not deduplicated by physical extent. These figures do not promise reclaimable space. Package-manager installation estimates must not be added directly to user-directory measurements.
 
 ## 3. 按需查找重复文件 / Find duplicates explicitly
 
@@ -63,7 +67,7 @@ Space Analysis, duplicate detection, and application profiles stay on the select
 
 | 模块 / Tool | 默认资源上限 / Default limits |
 | --- | --- |
-| 目录分析 / Directory analysis | 100,000 个节点，包含根、子目录和普通文件；最多 128 层目录。100,000 nodes including the root, directories, and regular files; at most 128 directory levels. |
+| 目录分析 / Directory analysis | 100,000 个可见节点，包含根及各类目录项；最多 128 层目录。100,000 visible nodes including the root and all entry types; at most 128 directory levels. |
 | 重复检测 / Duplicate detection | 100,000 个唯一普通文件，包含低于最小大小的文件；另限制最多 100,000 个目录；最多 128 层。100,000 unique regular files, including files below the size threshold; a separate 100,000-directory limit; at most 128 levels. |
 | 软件画像 / Application profile | 每个关联目录使用目录分析的上述上限。The directory-analysis limits apply separately to each associated location. |
 | 开发环境 / Developer Environment | 最多检查 500,000 项、50,000 个目录、32 层；显示和导出实际占用最大的 2,000 组。At most 500,000 inspected entries, 50,000 directories, and 32 levels; display/export the largest 2,000 groups by allocated bytes. |
@@ -133,11 +137,11 @@ CSV 使用 UTF-8 BOM、引号与双引号转义；可能被电子表格解释为
 
 CSV uses a UTF-8 BOM, quoted cells, and escaped double quotes. Potential spreadsheet formula prefixes (`= + - @`, including after leading whitespace), leading tabs, and carriage returns are prefixed with an apostrophe. `QSaveFile` commits the output. Export does not trigger a new content scan.
 
-- **目录页**：导出当前目录及其全部已扫描后代，搜索不改变范围；目录行含子树总量，不应把所有层级行再次相加。
+- **目录页**：导出当前目录及其全部已扫描后代，搜索不改变范围；目录行含子树总量，不应把所有层级行再次相加。`state` 标明完整、待统计、部分统计或排除原因；`children_complete` 仅表示直属条目是否列全，不保证所有后代统计完成。
 - **重复页**：导出全部已完成分组，搜索不隐藏组成员；报告记录实际扫描阈值、扫描/完整校验文件数及逻辑冗余口径。每个文件行重复列出所属组冗余量，该列应按组读取，不按文件行累加。
 - **开发环境**：导出全部已显示分组，搜索和类别筛选不改变范围；记录扫描根、完成状态、跳过项、省略组数以及统计总计。达到 2,000 组显示上限时，CSV 不是全部已识别组的明细。
 
-- **Directory tab**: exports the current directory and all scanned descendants. Search does not narrow the export. Directory rows contain subtree totals; summing every hierarchy level would double count.
+- **Directory tab**: exports the current directory and all scanned descendants. Search does not narrow the export. Directory rows contain subtree totals; summing every hierarchy level would double count. `state` records completeness or exclusion reasons. `children_complete` describes only the immediate listing, not measurement of all descendants.
 - **Duplicate tab**: exports all completed groups and all their members, independent of search. Metadata records the actual scan threshold, inspected/full-hashed counts, and logical-redundancy semantics. Group redundancy repeats on each member row; read it once per group.
 - **Developer Environment**: exports all displayed groups independent of search/category filters, with the scan root, completion state, omissions, and totals. At the 2,000-group display limit, the CSV is not a complete list of every identified group.
 

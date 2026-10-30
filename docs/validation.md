@@ -1,5 +1,15 @@
 # Validation scope / 验证范围
 
+## Version 1.4.1 / 版本 1.4.1
+
+On 2026-10-30, the sibling-visibility regression reproduced the previous defect: a fixture with Documents, Downloads, Desktop and a file displayed only one of four immediate entries when the node budget was exhausted. The corrected traversal retains all four entries, explicitly marks pending/partial measurements, and allows pending folders to be scanned separately. A read-only comparison against the local home directory found 75 immediate entries and all 75 in the scan result, with zero missing; the 100,000-node bound still left 34 directories pending. This verifies visibility, not complete home-folder size accounting.
+
+All 13 local CTest targets passed, including sibling visibility, hidden/link entries, parent-scope filter reset, continued scanning and CSV states. The production executable passed four Space Analysis UI checks (English/Chinese × 13/18 px) plus a read-only real-home smoke check. The fresh Ubuntu 22.04 amd64 DEB passed metadata, dependencies, ELF, desktop assets, checksums and version checks; its extracted executable passed all seven pages in both languages at 18 px (14 checks). All 549 translations and placeholders passed validation. Native release results and public download verification must be checked for the v1.4.1 tag; these local/offscreen results do not establish physical desktop or GPU performance.
+
+2026-10-30，先用 Documents、Downloads、Desktop 和一个文件复现旧问题：达到节点上限后，四个同级项目仅显示一个。修复后四项均保留，明确标记待统计或部分统计，待统计目录可单独继续扫描。对本机实际主目录只读核对：75 个顶层项目全部进入结果，遗漏 0 项；十万节点上限仍留下 34 个待统计目录。这验证了可见性，不代表主目录总大小已完整统计。
+
+本机 13 个 CTest 目标全部通过，覆盖同级项目、隐藏项与链接、上一级清除搜索、继续扫描及 CSV 状态。正式程序通过空间分析页中英文 × 13/18 px 四组界面检查，以及实际主目录只读检查；全新 Ubuntu 22.04 amd64 DEB 通过元数据、依赖、ELF、桌面资源、校验与版本检查，解包程序通过七类页面中英文 18 px 共 14 组检查；549 条翻译与占位符验证通过。原生发布与公开安装包结果需对应 v1.4.1 标签另行核实；本地离屏检查不代表实体桌面或 GPU 性能。
+
 ## Version 1.4.0 / 版本 1.4.0
 
 On 2026-10-29, a fresh local Ubuntu 22.04 amd64 / Qt 5.15.3 release build passed all 13 CTest targets. The generated `disklens_1.4.0_ubuntu22.04_amd64.deb` passed metadata, ELF architecture, dependencies, desktop/icon assets, checksums and `--version` checks. Its extracted executable passed 14 read-only smoke checks: all seven pages in English and Chinese at 18 px, using disposable scan/cache/state directories. All 540 translation messages and placeholders were verified. [Release CI #13](https://github.com/broruan/DiskLens/actions/runs/40844679224), tag `v1.4.0`, commit `119b775`, completed successfully in 3m 24s. All six native Ubuntu 22.04 / 24.04 / 26.04 × amd64 / arm64 jobs passed, followed by release publication. All six DEBs were downloaded again from the public [v1.4.0 release](https://github.com/broruan/DiskLens/releases/tag/v1.4.0) and independently verified against `SHA256SUMS`, version 1.4.0 and their architecture metadata. GitHub latest resolves to v1.4.0. These remain automated/offscreen checks; physical desktop/GPU behavior and real uninstall operations require separate validation.
